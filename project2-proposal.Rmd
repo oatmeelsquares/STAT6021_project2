@@ -1,0 +1,41 @@
+---
+title: "Project 2 Proposal"
+author: "Becky Desrosiers, Abner Castillos, Alexandra Ferentinos, John Le"
+date: "2023-11-07"
+output: html_document
+---
+
+
+
+
+
+Questions 
+
+1. Is there a significant linear relationship between year built and square footage? 
+
+2. Can we predict whether a house is on a waterfront based on other qualities? Square footage, # bedrooms, # bathrooms, sqft_living15, condition, grade. 
+
+ 
+
+Data visualizations 
+
+Abner 
+
+1. Histogram square footage frequency (few observations on one end or the other may skew results) 
+
+2. Boxplot – density of data at different values (shows distribution of data) - condition or grade based on waterfront or not 
+
+Alexandra 
+
+1. Histogram year built and square footage, checking for skews (single variable visualization, year built and frequency) 
+
+2. Scatterplot: Square footage against number of bed rooms, color=waterfront 
+
+John 
+
+1. Scatter plot between year built and square footage to show individual data points  
+2. Histogram for each variable split by waterfront status, to visualize the frequency of values  
+
+ 
+
+Have everything done by November 11 so we can do a final check before submitting. 
