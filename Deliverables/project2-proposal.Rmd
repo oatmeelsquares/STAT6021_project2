@@ -1,6 +1,6 @@
 ---
 title: "Project 2 Proposal"
-author: "Becky Desrosiers, Abner Castillos, Alexandra Ferentinos, John Le"
+author: "Becky Desrosiers, Abner Casillas-colon, Alexandra Ferentinos, John Le"
 date: "2023-11-07"
 output: html_document
 ---
@@ -32,7 +32,7 @@ We are interested in the second question to find out if there is a significant d
 
 ```{r}
 # Split data
-Data<-read.csv("kc_house_data.csv", sep=",", header=TRUE)
+Data<-read.csv("../Instructions/kc_house_data.csv", sep=",", header=TRUE)
 set.seed(6021)
 sample.data<-sample.int(nrow(Data), floor(.50*nrow(Data)), replace = F)
 train<-Data[sample.data, ]
@@ -45,11 +45,13 @@ library(ggplot2)
 
 ### Question 1: Is there a significant linear relationship between year built and square footage?
 
+.
+
 
 ```{r}
 ggplot(train, aes(x = yr_built)) +
   geom_histogram(fill = "skyblue", color = "black", bins = 30) +
-  labs(title = "Histogram of Year Built",
+  labs(title = "Year Built",
        x = "Year Built",
        y = "Frequency")
 ```
@@ -64,7 +66,7 @@ This visualization relates to the above question as from this positive trend we 
 ```{r}
 ggplot(train, aes(x=sqft_living))+
   geom_histogram(bins=104, fill = "skyblue", color = "black")+
-  labs(x="Living Space in sqft", y="Count", title= "Histogram of sqft Living Space")
+  labs(x="Square Footage", y="Count", title= "Histogram of sqft Living Space")
 ```
 
 
@@ -83,11 +85,15 @@ ggplot(train, aes(x = yr_built, y = sqft_living)) +
 ```
 
 
+The points are spread across the entire range of years, from the early 1900s to the 2000s, showing that the dataset includes a wide range of house ages. There doesn't appear to be a clear trend indicating a strong relationship between the year built and the size of the living space. The distribution of square footage is fairly consistent across the years, with a large concentration of homes between 1000 and 3000 square feet regardless of the year built. Towards the more recent years (post-1975), there is a visible increase in the number of homes with larger square footage, which could suggest a trend in building larger homes in more recent decades.
+
+There are a few outliers, particularly homes with exceptionally large square footage, which stand out above the main cluster of data points. These could represent mansions or unusually large properties. For the early 1900s, the data points are more sparse, which could be due to fewer homes from that era being included in the dataset, or it could reflect less consistency in house sizes during those years.
+
 
 
 ### Question 2: Can we predict whether a house is on a waterfront based on other qualities? Square footage, # bedrooms, # bathrooms, sqft_living15, condition, grade.
 
-
+.
 
 ```{r}
 ggplot(train, aes(x = bedrooms, y = sqft_living, color = as.factor(waterfront))) +
@@ -103,14 +109,14 @@ The scatter plot data visualization indicates a concentration of residential pro
 
 It is interesting to note that the outliers in terms of the square footage of the living spaces do not seem to be distinctly influenced by the proximity of a home to a waterfront. This observation may imply that the size of the living area of a house may not necessarily correlate with its location relative to a waterfront area, this could be that other predictors are more influential in the response variable square footage. So, from the waterfront quality in consideration to square footage we cannot necessarily predict whether the house is a waterfront home. It does appear, however, that within a given number of bedrooms, waterfront properties tend to be on the higher end in terms of square footage.
 
-One other important thing to note from this visualization is the outlier with more than 30 bedrooms. This seems very unusual, and may be an error in input, espeically because the square footage is relatively low. We may have to consider dropping this data point.
+One other important thing to note from this visualization is the outlier with more than 30 bedrooms. This seems very unusual, and may be an error in input, especially because the square footage is relatively low. We may have to consider dropping this data point.
 
 
 
 ```{r}
 ggplot(train, aes(y= as.factor(waterfront), x = grade))+
   geom_boxplot(fill="skyblue")+
-  labs(x="Grade of the Property", y="Waterfront Status", title="Boxplots of Grade for Waterfront and Non-Waterfront Properties")
+  labs(x="Grade of the Property", y="Waterfront Status", title="Boxplot of Grade for Waterfront and Non-Waterfront Properties")
 ```
 
 
@@ -122,31 +128,33 @@ When examining the properties without comparing their categories we note that wa
 
 
 
-**Histograms for each variable split by waterfront status**
-```{r}
-library(ggplot2)
-
-# Variables of interest
-variables <- c("sqft_living", "bedrooms", "bathrooms", "condition", "grade")
-
-# Adjust the grid layout based on the number of variables
-par(mfrow = c(3, 2))
-
-# Create histograms for each variable
-for (var in variables) {
-  ggplot(train, aes(x = .data[[var]], fill = factor(waterfront))) +
-    geom_histogram(position = "dodge", bins = 30, alpha = 0.7) +
-    scale_fill_brewer(palette = "Set1") +
-    labs(fill = "Waterfront", x = var, y = "Frequency") +
-    theme_minimal() +
-    labs(title = paste("Histogram of", var, "by Waterfront Status"))
-}
+\newpage
 
 
+
+##### Histogram of Square Footage for Waterfront and Non-waterfront Properties
+
+```{r, fig.show="hold", out.width="50%"}
+
+# Waterfront properties
+ggplot(train[which(train$waterfront == 1),], aes(x = sqft_living)) +
+  geom_histogram(position = "stack", bins = 30, fill = "skyblue", color = "black") +
+  labs(fill = "Waterfront", x = "Square Footage", y = "Frequency") +
+  theme_minimal() +
+  labs(title = "Waterfront")
+
+# Non-waterfront properties
+ggplot(train[which(train$waterfront == 0),], aes(x = sqft_living)) +
+  geom_histogram(position = "stack", bins = 30, fill = "skyblue", color = "black") +
+  labs(fill = "Waterfront", x = "Square Footage", y = "Frequency") +
+  theme_minimal() +
+  labs(title = "Non-waterfront")
 ```
 
 
+From the graphs, we can observe that the distribution of living area sizes for both waterfront and non-waterfront homes appears right-skewed, indicating that there are a larger number of homes with smaller living areas and fewer homes with larger living areas.Homes that are not on the waterfront are more numerous across the range of sizes, so non-waterfront homes make up a larger proportion of the data. Waterfront homes are less frequent, which is expected since waterfront properties are typically rarer and potentially more desirable.
 
+The range of square footage for non-waterfront homes extends from the smallest to the largest sizes, showing a wide variety of home sizes. Waterfront homes tend to have larger living areas on average, with fewer small-sized homes compared to non-waterfront homes. There is a peak in frequency for non-waterfront homes at the smaller end of the  scales. For waterfront homes, the data are more evenly distributed, although with a much lower frequency overall due to fewer waterfront homes in the dataset.
 
 
 
