@@ -12,6 +12,12 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 kc_house_data <- read.csv('/Users/johnle/Downloads/kc_house_data.csv')
 head(kc_house_data)
+set.seed(6021)
+sample.kc_house_data<-sample.int(nrow(kc_house_data), floor(.50*nrow(kc_house_data)), replace = F)
+train<-kc_house_data[sample.kc_house_data, ]
+test<-kc_house_data[-sample.kc_house_data, ]
+1
+
 ```
 
 Scatter Plot between year built and square footage:
