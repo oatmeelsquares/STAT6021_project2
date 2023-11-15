@@ -12,42 +12,75 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 kc_house_data <- read.csv('/Users/johnle/Downloads/kc_house_data.csv')
 head(kc_house_data)
+set.seed(6021)
+sample.kc_house_data<-sample.int(nrow(kc_house_data), floor(.50*nrow(kc_house_data)), replace = F)
+train<-kc_house_data[sample.kc_house_data, ]
+test<-kc_house_data[-sample.kc_house_data, ]
+1
+
 ```
 
-Scatter Plot between year built and square footage:
-```{r}
-library(ggplot2)
+Scatter Plot between sqft_living and Price:
 
-# Assuming your data frame is named 'kc_house_data' and is already loaded in R
-ggplot(kc_house_data, aes(x = yr_built, y = sqft_living)) +
+The scatter plot visualizes the relationship between the square footage of living space ("Square Footage of Living Space") and the price of houses ("Price"). Here's what we can interpret from this graph:
+
+Positive Correlation: There is a clear positive correlation between the square footage of living space and the price of the houses. As the square footage increases, so does the price, which is a common trend in real estate markets.
+
+Data Concentration: Most of the data points are concentrated in the lower range of square footage and price, indicating that a majority of the houses in this dataset are moderately sized and priced.
+
+Outliers: There are several outliers, particularly houses with a large square footage that are priced much higher than the rest. These could represent luxury homes or properties with unique features that significantly increase their value.
+
+Higher Square Footage Premium: The plot suggests that as homes increase in square footage, the price does not just increase linearly but may increase at a higher rate. This could imply a premium for larger homes beyond a certain size.
+
+Variation in Price: For any given square footage, there is a wide variation in price. This indicates that factors other than square footage are also affecting the price, such as location, house condition, and market trends.
+
+Dense Clustering: The dense clustering of points at the lower square footage range could make it challenging to distinguish between the price differences among smaller homes. This might necessitate a more detailed analysis or the use of additional variables to understand the pricing structure for these homes.
+```{r}
+
+library(ggplot2)
+ggplot(kc_house_data, aes(x = sqft_living, y = price)) +  # Changed 'yr_built' to 'sqft_living'
   geom_point(alpha = 0.6) + 
   theme_minimal() +
-  labs(title = "Scatter Plot of Square Footage vs Year Built",
-       x = "Year Built",
-       y = "Square Footage of Living Space")
+  labs(title = "Scatter Plot of Price vs Square Footage of Living Space",  # Adjust the title
+       x = "Square Footage of Living Space",  # Update the x-axis label to 'Square Footage of Living Space'
+       y = "Price")  # Confirm the y-axis label is 'Price'
+
 
 ```
 
 Histograms for each variable split by waterfront status:
+
+The visualization is a histogram of the "sqft_living" variable, which represents the living area square footage of homes, split by waterfront status. The histogram allows us to compare the distribution of living area sizes for homes that are either on the waterfront (denoted by 1) or not on the waterfront (denoted by 0).
+
+From the graph, we can observe the following:
+
+Distribution Shape: The distribution of living area sizes for both waterfront and non-waterfront homes appears right-skewed, indicating that there are a larger number of homes with smaller living areas and fewer homes with larger living areas.
+
+Comparison by Waterfront Status:
+
+Homes that are not on the waterfront (red bars) are more numerous across the range of "sqft_living" sizes. This suggests that non-waterfront homes make up a larger proportion of the data.
+Waterfront homes (blue bars) are less frequent, which is expected since waterfront properties are typically rarer and potentially more desirable.
+Range and Outliers:
+
+The range of "sqft_living" for non-waterfront homes extends from the smallest to the largest sizes, showing a wide variety of home sizes.
+Waterfront homes tend to have larger living areas on average, with fewer small-sized homes compared to non-waterfront homes.
+Frequency of Specific Sizes:
+
+There is a peak in frequency for non-waterfront homes at the lower end of the "sqft_living" scale, indicating a high concentration of smaller homes.
+For waterfront homes, the data are more evenly distributed, although with a much lower frequency overall due to fewer waterfront homes in the dataset.
 ```{r}
 library(ggplot2)
 
-# Variables of interest
-variables <- c("sqft_living", "bedrooms", "bathrooms", "condition", "grade")
+# Variable of interest
+variable <- "sqft_living"
 
-# Adjust the grid layout based on the number of variables
-par(mfrow = c(3, 2))
-
-# Create histograms for each variable
-for (var in variables) {
-  ggplot(kc_house_data, aes(x = .data[[var]], fill = factor(waterfront))) +
-    geom_histogram(position = "dodge", bins = 30, alpha = 0.7) +
-    scale_fill_brewer(palette = "Set1") +
-    labs(fill = "Waterfront", x = var, y = "Frequency") +
-    theme_minimal() +
-    labs(title = paste("Histogram of", var, "by Waterfront Status"))
-}
-ggsave(filename = paste("histogram_of_", var, "_by_waterfront.png", sep = ""), plot = p)
+# Create histogram for the variable
+ggplot(kc_house_data, aes_string(x = variable, fill = "factor(waterfront)")) +
+  geom_histogram(position = "dodge", bins = 30, alpha = 0.7) +
+  scale_fill_brewer(palette = "Set1") +
+  labs(fill = "Waterfront", x = variable, y = "Frequency") +
+  theme_minimal() +
+  labs(title = paste("Histogram of", variable, "by Waterfront Status"))
 
 ```
 
