@@ -23,11 +23,11 @@ library(scales)
 ## Project 2
 
 
-#  Is there a significant linear relationship between year built and square footage? 
+#  sale price (response) predictors: sqft, #bedrooms, condition, #floors, sqft above
 
-The histogram visualization notes a right density regarding frequency of homes built. There appears to be a positive trend between year built and frequency of homes built. This implies that there is an upward trend in home construction throughout the years from 1900's to the 2000's. This could be due to an increase in housing construction due to population growth of the area.
+The box plot visualization of sale price against house condition, ranging from 1 to 5, (5 being the best) shows interesting information about the relationship between condition and sale price. Houses in condition 3 to 5 have the most outliers. This could indicate that there is a higher variance in sale prices within house conditions 3 to 5. 
 
-This visualization relates to the above question as from this positive trend we can then note if the squarefootage has increased over the years as well, perhaps due to larger home popularity throughout the modern residential construction age, or perhaps other factors. 
+This visualization relates to the above question as it shows that house condition 3 to 5 has higher variability in sale price meaning there may be other predictors affecting this nuance. So more analysis of sale price(response), to the above predictors from the question could illuminate such outliers. 
 
 
 ```{r}
@@ -37,13 +37,14 @@ sample.data<-sample.int(nrow(Data), floor(.50*nrow(Data)), replace = F)
 train<-Data[sample.data, ]
 test<-Data[-sample.data, ]
 
-
-# Create a histogram for 'year built' frequency 
-ggplot(train, aes(x = yr_built)) +
-  geom_histogram(fill = "skyblue", color = "black", bins = 30) +
-  labs(title = "Histogram of Year Built",
-       x = "Year Built",
-       y = "Frequency")
+##to assist with the visualization 
+log_price<-log10(train$price)
+#boxplot of House condition vs Sale Price
+ggplot(train, aes(x = factor(condition), y = log_price)) +
+  geom_boxplot(fill="green") +
+  labs(title = 'Boxplot of House Condition vs Sale Price',
+       x = 'House Condition',
+       y = 'Sale Price')
 ```
 
 
