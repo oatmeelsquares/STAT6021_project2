@@ -13,18 +13,18 @@ knitr::opts_chunk$set(echo = F)
 
 # Section 1: Questions of Interest
 
-### Question 1: Have houses gotten bigger and better over time? That is, is there a linear relationship between year built and square footage, grade, and the square footage of the nearest 15 neighbors?
+### Question 1: What factors affect the price of a home? Out of all the predictors, which is the best model? Bedrooms, bathrooms, square footage of the house or the property, condition, square footage of above-floor-level space, square footage of basement space, year built, year renovated, and the square footage of the houses and properties of the 15 closest neighbors.
 
 ### Question 2: Can we predict whether a house is on a waterfront based on other qualities? Square footage, # bedrooms, # bathrooms, sqft_living15, condition, grade.
 
 
-The response variable for the first question will be square footage. We are interested in seeing if square footage has increased over time. The response variable for the second data set is waterfront status: is it a waterfront property or not? We are interested in predicting whether a property is waterfront or not based on other properties.
+The response variable for the first question will be price. We are interested in finding which factors most influence the price. The response variable for the second data set is waterfront status: is it a waterfront property or not? We are interested in predicting whether a property is waterfront or not based on other attributes.
 
 
-We are interested in the first question because we have noticed that houses are very expensive nowadays. Even so, when we go to historic places and see the types of houses regular people used to live in, it's like what we would call a shack in modern times. Houses have become much more extensive and also include more amenities, such as central heat, air conditioning, and indoor plumbing. We are interested in looking at if square footage, grade, and neighborhoods with larger houses can be attributed as some of the factors in the higher prices we see today, by seeing how it has changed over time. Our hypothesis is that these characteristics will have increased to a statistically significant degree and are a factor in high housing prices.
+The practical application for the first question will be for a construction company to determine how best to invest their money into a project so that they can sell it for the best price. A buyer may also benefit from the analysis by discerning which attributes can be money-savers vs. with which attributes (number of bathrooms, number of floors, etc.) they may be able to gain more without spending much more.
 
 
-We are interested in the second question to find out if there is a significant difference between waterfront properties and non-waterfront properties. We hypothesize that waterfront properties will be higher quality in general (higher square footage, more bedrooms and bathrooms, higher grade), and have neighbors with bigger houses, but perhaps be of lower condition because of the proximity to water and the risk of flooding.
+We are interested in the second question to find out if there is a significant difference between waterfront properties and non-waterfront properties. We hypothesize that waterfront properties will be higher quality in general (higher square footage, more bedrooms and bathrooms, higher grade), and have neighbors with bigger houses, but perhaps will be in worse condition because of the proximity to water and the risk of flooding.
 
  
 
@@ -43,22 +43,25 @@ library(ggplot2)
 ```
 
 
-### Question 1: Have houses gotten bigger and better over time? That is, is there a linear relationship between year built and square footage, grade, and the square footage of the nearest 15 neighbors?
+### Question 1: What factors affect the price of a home? Out of all the predictors, which is the best model? Bedrooms, bathrooms, square footage of the house or the property, condition, square footage of above-floor-level space, square footage of basement space, year built, year renovated, and the square footage of the houses and properties of the 15 closest neighbors.
 
 .
 
 
 ```{r}
-ggplot(train, aes(x = yr_built)) +
-  geom_histogram(fill = "skyblue", color = "black", bins = 30) +
-  labs(title = "Year Built",
-       x = "Year Built",
-       y = "Frequency")
+##to assist with the visualization 
+log_price<-log10(train$price)
+#boxplot of House condition vs Sale Price
+ggplot(train, aes(x = factor(condition), y = log_price)) +
+  geom_boxplot(fill="skyblue") +
+  labs(title = 'Boxplot of House Condition vs Sale Price',
+       x = 'House Condition',
+       y = 'Sale Price')
 ```
 
-The histogram visualization notes a right skew in the data. There appears to be a positive trend between year built and homes built. This implies that there is an upward trend in home construction throughout the years represented in the dataset. This could be due to an increase in housing construction due to population growth of the area.
+The box plot provides a visualization of sale price based on house condition, where 1 is the worst condition and 5 is the best condition. The boxplots show interesting information about the relationship between condition and sale price. Houses in better condition have more outliers. This indicates that there is a higher variance in sale prices within house conditions 3 to 5. 
 
-This visualization relates to the above question as from this positive trend we can then note if the square footage has increased over the years as well, perhaps due to larger home popularity throughout the modern residential construction age, or perhaps other factors.
+This visualization relates to the above question as it shows that house condition 3 to 5 has higher variability in sale price meaning there may be other predictors affecting this nuance. So more analysis of sale price, against the above predictors from the question could illuminate the cause for such outliers. 
 
 
 
@@ -70,24 +73,23 @@ ggplot(train, aes(x=sqft_living))+
 ```
 
 
-The histogram  displays a distribution for the squarefoot living space of the houses within the training data set. Our distribution is right-skewed, indicating potentially to be on the lookout for outliers on the extreme end that will impact the linearity of the relationship when we conduct our testing. Additionally, if we are to describe our data set we would expect the mean value to be higher than the median and may want to use the median value as a descriptor when discussing how to evaluate the central point of housing living space as a better representation of the data set.
+The histogram  displays a distribution for the squarefoot living space of the houses within the training data set. Our distribution is right-skewed, indicating potentially to be on the lookout for high-leverage data points on the extreme end that will impact the relationship when we build our model. Additionally, if we are to describe our data set we would expect the mean value to be higher than the median and may want to use the median value as a descriptor when discussing how to evaluate the central point of housing living space as a better representation of the data set.
 
 
 
 ```{r}
-ggplot(train, aes(x = yr_built, y = sqft_living)) +
-  geom_point(alpha = 0.2) + 
+ggplot(train, aes(x = sqft_living, y = price)) +
+  geom_point(alpha = 0.1) + 
   theme_minimal() +
-  labs(title = "Scatter Plot of Square Footage against Year Built",
-       x = "Year Built",
-       y = "Square Footage of Living Space")
+  labs(title = "Scatter Plot of Price vs Square Footage of Living Space", x = "Square Footage of Living Space", y = "Price")
 
 ```
 
 
-The points are spread across the entire range of years, from the early 1900s to the 2000s, showing that the dataset includes a wide range of house ages. There doesn't appear to be a clear trend indicating a strong relationship between the year built and the size of the living space. The distribution of square footage is fairly consistent across the years, with a large concentration of homes between 1000 and 3000 square feet regardless of the year built. Towards the more recent years (post-1975), there is a visible increase in the number of homes with larger square footage, which could suggest a trend in building larger homes in more recent decades.
+There is a clear positive correlation between the square footage of living space and the price of a house. As the square footage increases, so does the price, which is a common trend in real estate markets. Most of the data points are concentrated in the lower range of square footage and price, indicating that a majority of the houses in this dataset are moderately sized and priced. The plot suggests that as homes increase in square footage, the price does not just increase linearly but may increase at a higher rate. This could imply a premium for larger homes beyond a certain size.
 
-There are a few outliers, particularly homes with exceptionally large square footage, which stand out above the main cluster of data points. These could represent mansions or unusually large properties. For the early 1900s, the data points are more sparse, which could be due to fewer homes from that era being included in the dataset, or it could reflect less consistency in house sizes during those years.
+The dense clustering of points at the lower square footage range could make it challenging to distinguish between the price differences among smaller homes. This might necessitate a more detailed analysis or the use of additional variables to understand the pricing structure for these homes. For any given square footage, there is quite a wide variation in price. This indicates that factors other than square footage are also affecting the price, which we will explore in our analysis. There are several data points which may have high leverage, particularly houses with a large square footage that are priced much higher than the rest. These could represent luxury homes or properties with unique features that significantly increase their value. Also of note is the one point at the high end of square footage but the low end of price, which could be influential.
+
 
 
 
