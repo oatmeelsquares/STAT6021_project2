@@ -67,13 +67,13 @@ This visualization relates to the above question as it shows that house conditio
 
 
 ```{r}
-ggplot(train, aes(x=sqft_living))+
-  geom_histogram(bins=104, fill = "skyblue", color = "black")+
-  labs(x="Square Footage", y="Count", title= "Histogram of sqft Living Space")
+ggplot(train, aes(x=yr_built))+
+  geom_histogram(bins=104, fill= 'skyblue')+
+  labs(x="Year House was Built", y="Count", title= "Histogram of House Construction Date")
 ```
 
 
-The histogram  displays a distribution for the squarefoot living space of the houses within the training data set. Our distribution is right-skewed, indicating potentially to be on the lookout for high-leverage data points on the extreme end that will impact the relationship when we build our model. Additionally, if we are to describe our data set we would expect the mean value to be higher than the median and may want to use the median value as a descriptor when discussing how to evaluate the central point of housing living space as a better representation of the data set.
+This histogram is created to evaluate the distribution of the construction date of the houses in the dataset. The distribution of the histogram is left skewed, with more observations occurring in recent years. Though the skewness that is present is not necessarily extreme it may still be prudent to examine if the older homes present outsized influence on price when fitting the model. One thing to note is that certain years exhibit high spikes of activity in regular intervals, which appear to be after every 5-10 years. When examining the relationship between price and construction date these high volume points may be worth further scrutiny in case the increased quantity coincided with decreased quality of construction that impacts price.
 
 
 
