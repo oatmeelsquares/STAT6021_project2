@@ -62,6 +62,62 @@ ggplot(train, aes(x = bedrooms, y = sqft_living, color = as.factor(waterfront)))
        y = "Square Footage",
        color = "Waterfront")
 ```
+# Indicators of Mulitcollinearity:
+From the correlation matrix values will range from -1, 0, and 1. Where closeness to -1 indicates a strong negative correlation and closeness to 1 indicates a strong positive correlation. As such, closeness to 0 indicates that there is no correlation. From the predictors mentioned in Question 1 the following appear to have positive correlations:
+-sqft_living and grad (0.756)
+-sqft_living and sqft_above (0.874)
+-sqft_living and sqft_living15 (0.754)
+-bathrooms and sqft_living (0.755)
+
+The following appear to have negative correlations:
+-condition and yr_built (-0.366)
+-sqft_above and sqft_basement (-0.036)
+-condition and sqft_above(-0.159)
 
 
+```{r}
+# Create the scatterplot matrix
+library(GGally)
+##filter predictors and keep response 
+#predictor interaction, with response 
+round(cor(train[,c(-1,-2,-8,-9,-10,-17,-18,-19)]),3)
 
+```
+
+#VIFS:
+Removed predictor variable sqft_basement as it exhibited low correlatoin to reponse variable price, (.338) This decision was based on the relevancy of the model to predictors and due to the low correlation to price this predictor was dropped. 
+
+From the VIFS it seems that sqft_living has a VIF of 7.305 indicating high levels of multicollinearity. The other VIFs values are below 5, deeming them to be at acceptable levels for multicollinearity threshold. Further investigation of sqft_living will need to be done as it seems to be exhibit multicollinearity characteristics. 
+
+The reduced VIF are now all below 4 suggesting a non issue with multicollinearity. 
+```{r}
+##VIFS
+#view(train)
+##dropped sqft_basement
+library(faraway)
+result_full <- lm(price ~ bedrooms + bathrooms + sqft_living + sqft_lot + condition + grade + sqft_above + yr_built + yr_renovated + sqft_living15 + sqft_lot15, data = train)
+vif(result_full)
+
+##reduced model (removing sqft_living)
+result_reduced<- lm(price ~ bedrooms + bathrooms + sqft_lot + condition + grade + sqft_above + yr_built + yr_renovated + sqft_living15 + sqft_lot15, data = train)
+vif(result_reduced)
+```
+
+#Condition:
+ From the boxplot we can see that waterfront properties appear to have more houses that are a 4 or 5 condition. 
+ 
+ The bar plot shows that a higher proportion of waterfront properties are rated at condition 4 or 5. This may be that waterfront properties have a premium maintenance/environmental maintenance to withstand being near aquatic conditions or how water front properties are marketed to the consumer as being of higher condition status. 
+```{r}
+##condtion bar graph
+library(ggplot2)
+
+#factor
+train$condition <- factor(train$condition)
+train$waterfront <- factor(train$waterfront)
+
+ggplot(train, aes(x = waterfront, fill = condition, group = condition)) +
+  geom_bar(position = "fill") +
+  labs(title = "Proportion of Condition by Waterfront Status") +
+  scale_fill_manual(values = c("red", "blue", "forestgreen", "purple", "yellow")) 
+
+```
