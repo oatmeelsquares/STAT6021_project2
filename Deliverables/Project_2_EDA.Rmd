@@ -17,6 +17,7 @@ library(tidyverse)
 ```{r}
 Data <- read.csv("kc_house_data.csv", sep=",", header=TRUE)
 Data$waterfront <- factor(Data$waterfront)
+Data$view <- factor(Data$view)
 set.seed(6021)
 sample.data <- sample.int(nrow(Data), floor(.50*nrow(Data)),replace = F)
 train <- Data[sample.data,]
@@ -44,7 +45,33 @@ ggplot(train, aes(y=waterfront, x=grade))+
   geom_boxplot(fill="aquamarine2")+
   labs(x="Grade of the Property", y="Waterfront Status", title="Boxplots of Grade based on if property is Waterfront")
 ```
+1.
 
 
+```{r}
+options(scipen = 999)
+ggplot(train, aes(y=view, x=price))+
+  geom_boxplot(fill="aquamarine2")+
+  scale_x_log10()+
+  labs(x="Price (Log 10 Scale)", y="View (Higher is better)", title="Boxplots of Price based on Property View")
+  
+```
+
+```{r}
+non_zero <- Data %>% 
+  filter(yr_renovated > 0)
+
+nrow(non_zero)
+```
+
+1. Histogram Year Built frequency
+
+This histogram is created to evaluate the distribution of the construction date of the houses in the dataset. The Distribution of the histogram is roughly left skewed, with more observations occurring in recent years. Though the skewness that is present is not necessarily extreme it may still be prudent to examine if the older homes present outsized influence on price when fitting the model. One thing to note is that certain years exhibit high spikes of activity in regular intervals, which appear to be after every 5-10 years. When examining the relationship between price and construction date these high volume points may be worth further scrutiny in case the increased quantity coincided with decreased quality of construction that impacts price.
+```{r}
+
+ggplot(train, aes(x=yr_built))+
+  geom_histogram(bins=104, fill= 'cornflowerblue')+
+  labs(x="Year House was Built", y="Count", title= "Histogram of House Construction Date")
+```
 
 
