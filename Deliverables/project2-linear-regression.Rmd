@@ -1,0 +1,43 @@
+---
+title: 'S5: Linear regression'
+author: "Becky Desrosiers, John Le"
+date: "2023-11-28"
+output: html_document
+---
+
+
+# Section 5: Linear Regression 
+
+```{r}
+# Setup
+library(ggplot2)
+library(dplyr)
+
+# Split data
+Data <- read.csv("../Instructions/kc_house_data.csv", sep=",", header=TRUE) %>% 
+  # remove irrelevant data: id, date, zip code, latitude and longitude
+  select(-1, -2, -17, -18, -19)
+
+set.seed(6021)
+
+sample.data <- sample.int(nrow(Data), floor(.50*nrow(Data)), replace = F)
+train <- Data[sample.data, ]
+test <- Data[-sample.data, ]
+
+```
+
+[Model selection criteria]
+
+
+Preliminary model: price ~ sqft
+
+
+```{r}
+model1 <- lm(price ~ sqft_living, data = train)
+summary(model1)
+```
+
+
+
+
+
