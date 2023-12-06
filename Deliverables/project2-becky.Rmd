@@ -13,7 +13,7 @@ library(ggplot2)
 library(dplyr)
 
 # Split data
-Data <- read.csv("../Instructions/kc_house_data.csv", sep=",", header=TRUE) %>% 
+Data <- read.csv('/Users/johnle/Downloads/kc_house_data.csv') %>% 
   # remove irrelevant data: id, date, zip code, latitude and longitude
   select(-1, -2, -17, -18, -19)
 
@@ -67,7 +67,62 @@ Also dropped from our considerations was the renovation year because very few of
 
 
 
+John Addition 
+```{r}
+# T-test for individual predictors
+summary(lm(price ~ sqft_living + grade, data = train))
 
+# ANOVA for model comparison
+anova(lm(price ~ sqft_living + grade, data = train), lm(price ~ sqft_living, data = train))
 
+```
+Linear Model Summary: Coefficients show both are significant predictors of price. R2 53.52% of variability in price is explained. F statistic shows a low p-value suggesting full model is a better fit than null model
 
+Anova Comparison: low p-val suggest that the full model is significantly better than reduced model alone
+
+```{r}
+# General F-test
+full.model <- lm(price ~ sqft_living + grade, data = train)
+reduced.model <- lm(price ~ sqft_living, data = train)
+anova(reduced.model, full.model)
+
+```
+p-value associated with the F-statistic indicates the improvement in the model due to adding grade is highly significant
+
+```{r}
+# AIC and BIC
+AIC(full.model, reduced.model)
+BIC(full.model, reduced.model)
+
+```
+the full model has a lower AIC and BIC compared to the reduced model, suggesting that it is the preferred model
+
+```{r}
+# Predict test data
+predictions_full <- predict(full.model, newdata=test)
+predictions_reduced <- predict(reduced.model, newdata=test)
+
+# residuals
+residuals_full <- test$price - predictions_full
+residuals_reduced <- test$price - predictions_reduced
+
+# PRESS
+press_full <- sum(residuals_full^2)
+press_reduced <- sum(residuals_reduced^2)
+press_full
+press_reduced
+
+```
+
+Full model has lower press statistis again confirming that it is better than the full model
+```{r}
+# Residual Analysis
+par(mfrow=c(2,2))
+plot(full.model)
+
+# Influential Observations
+influential <- cooks.distance(full.model)
+plot(influential, type="h")
+
+```
 
