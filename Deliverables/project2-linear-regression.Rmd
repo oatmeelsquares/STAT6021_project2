@@ -37,7 +37,88 @@ model1 <- lm(price ~ sqft_living, data = train)
 summary(model1)
 ```
 
+```{r}
+
+library(ggplot2)
+ggplot(train, aes(x = sqft_living, y = price)) +  # Changed 'yr_built' to 'sqft_living'
+  geom_point(alpha = 0.2) + 
+  theme_minimal() +
+  geom_smooth(method = "lm", se = FALSE)+
+  labs(title = "Scatter Plot of Price vs Square Footage of Living Space",  # Adjust the title
+       x = "Square Footage of Living Space",  # Update the x-axis label to 'Square Footage of Living Space'
+       y = "Price")  # Confirm the y-axis label is 'Price'
+
+```
+
+There is a clear relationship. We will explore further by looking at the residual plot.
+
+```{r}
+par(mfrow = c(2, 2))
+plot(model1)
+```
+
+Assumption 2 is met because the residuals average along the x-axis. However, assumption 1 is violated because the variance in residuals increases with x. We need to transform the response variable. We will use a boxcox plot to help determine what transformation to apply.
+
+```{r}
+library(MASS)
+MASS::boxcox(model1, lambda = seq(-2, 5, 1/10))
+```
+
+Since 0 is within the critical region on the boxcox plot and is preferred, we will apply a log transformation. *ystar1* = log(*y*). We will visualize the relationship again with the new variable.
+
+```{r}
+train$ystar1 <- log(train$price)
+
+
+ggplot(train, aes(x = sqft_living, y = ystar1)) +  # Changed 'yr_built' to 'sqft_living'
+  geom_point(alpha = 0.2) + 
+  geom_smooth(method = "lm", se = FALSE)
+  theme_minimal() +
+  labs(title = "Scatter Plot of Price vs Square Footage of Living Space",  # Adjust the title
+       x = "Square Footage of Living Space",  # Update the x-axis label to 'Square Footage of Living Space'
+       y = "log(Price)")  # Confirm the y-axis label is 'Price'
+
+
+```
+
+
+And investigate the new residual plot:
+
+
+```{r}
+model2 <- lm(ystar1 ~ sqft_living, data = train)
+
+par(mfrow = c(2, 2))
+plot(model2)
+```
+
+Assumption 1 is now met; the residuals are now evenly scattered around the mean. However, the mean residual skews negative as x grows large, and the scatterplot seems to show a curved relationship, rather than strictly linear, because the majority of the points are below the regression line when x is small and large, but above for moderate levels of x. We will try a log transformation on the predictor variable so that our model can remain interpretable.
 
 
 
+```{r}
+train$xstar1 <- log(train$sqft_living)
+
+
+ggplot(train, aes(x = xstar1, y = ystar1)) +  # Changed 'yr_built' to 'sqft_living'
+  geom_point(alpha = 0.2) + 
+  geom_smooth(method = "lm", se = FALSE)
+  theme_minimal() +
+  labs(title = "Scatter Plot of Price vs Square Footage of Living Space",  # Adjust the title
+       x = "log(Square Footage of Living Space)",  # Update the x-axis label to 'Square Footage of Living Space'
+       y = "log(Price)")  # Confirm the y-axis label is 'Price'
+
+
+```
+
+
+
+```{r}
+model2 <- lm(ystar1 ~ xstar1, data = train)
+
+par(mfrow = c(2, 2))
+plot(model2)
+```
+
+It looks like it was better before we transformed the predictor variable. Even though at very high levels of x, y increased much more than the model would predict, the assumptions were better met overall with the untransformed predictor variable. Perhaps another predictor can account for this variation at very high values of x. We will consider adding grade, since we found from our model selection criteria that grade may be a valuable predictor in the model.
 

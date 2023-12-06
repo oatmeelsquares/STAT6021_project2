@@ -35,7 +35,7 @@ $BIC = nlog(\frac{SS_{res}(p)}{n}) + plog(n)$
 We are looking for small values with this criterion: the smaller, the better.
 
 ```{r}
-all.models <- leaps::regsubsets(price ~ . , data = train, nbest = 2)
+all.models <- leaps::regsubsets(price ~ . , data = train, nbest = 1)
 bic <- sort(summary(all.models)$bic)
 bic
 ```
@@ -56,42 +56,13 @@ From the BIC, sqft_living, grade, view, and yr_renovated may all be valuable to 
 
 
 
-
-### Mallow's C~p~
-
-Mallow's C~p~ compares each model to the full model to determine which fits the data best. It also penalizes for complexity by subtracting the second term, which will be smaller when p is large.
-
-$C_{p} = \frac{SS_{res}(p)}{MS_{res}(p)} - (n - 2p)$
-
-We are looking for small values with this criterion: the smaller, the better.
-
-```{r}
-cp <- sort(summary(all.models)$cp)
-cp
-```
-
-The best model based on Mallow's C~p~ would be the first one listed here, with coefficients
-
-```{r}
-coef(all.models, which.min(cp))
-```
-
-However, the five models have relatively low values when compared to the rest of them, so they are worth investigating. 
-```{r}
-head(coef(all.models, cp), 5)
-```
-
-
-
 ### Visualizations to skip
 
-The number of bathrooms, and other sqft measurements are highly correlated with sqft_living, so we decided that a visualization for sqft_living would be sufficient to represent all of them. We will keep this in mind when selecting our models because there is likely to be multicollinearity between these predictors, and we will likely only keep one. A similar reasoning combined with low correlationw ith price caused us to leave the number of bedrooms out of our visualizations as well.
+The number of bathrooms, and other sqft measurements are highly correlated with sqft_living, so we decided that a visualization for sqft_living would be sufficient to represent all of them. We will keep this in mind when selecting our models because there is likely to be multicollinearity between these predictors, and we will likely only keep one. A similar reasoning combined with low correlation with price caused us to leave the number of bedrooms out of our visualizations as well.
 
 We decided to drop condition out of our model and not consider it because we can only consider one categorical variable at this point in our schooling, and grade was much more highly correlated with price. We therefore considered grade to be more significant to the model and it will be the categorical variable that we consider.
 
 Also dropped from our considerations was the renovation year because very few of the data points actually have a renovation year. We decided that the data relating to yr_renovated would be incomplete and possibly misrepresented by the dearth of observations, and that our model would be more useful without it.
-
-
 
 
 
