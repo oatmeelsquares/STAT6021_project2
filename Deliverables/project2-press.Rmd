@@ -1,0 +1,27 @@
+---
+title: "PRESS"
+author: "Becky Desrosiers"
+date: "2023-11-28"
+output: html_document
+---
+
+
+```{r}
+PRESS <- function(model) {
+
+  e <- model$residuals
+  h <- influence(model)$hat
+  
+  PRESS <- sum((e/(1-h)) ** 2)
+  return(PRESS)
+}
+```
+
+
+
+
+
+
+
+
+

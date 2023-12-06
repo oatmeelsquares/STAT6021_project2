@@ -1,0 +1,153 @@
+---
+title: "Becky's code for project 2"
+author: "Becky Desrosiers"
+date: "2023-11-19"
+output: html_document
+---
+
+
+
+```{r}
+# Setup
+library(ggplot2)
+library(dplyr)
+
+# Split data
+Data <- read.csv('/Users/johnle/Downloads/kc_house_data.csv') %>% 
+  # remove irrelevant data: id, date, zip code, latitude and longitude
+  select(-1, -2, -17, -18, -19)
+
+set.seed(6021)
+
+sample.data <- sample.int(nrow(Data), floor(.50*nrow(Data)), replace = F)
+train <- Data[sample.data, ]
+test <- Data[-sample.data, ]
+
+```
+
+
+### BIC
+
+Bayesian information criterion (BIC) is a model selection criterion that increases with model fit and penalizes for extra parameters. BIC is calculated for each model with the following formula:
+
+$BIC = nlog(\frac{SS_{res}(p)}{n}) + plog(n)$
+
+We are looking for small values with this criterion: the smaller, the better.
+
+```{r}
+all.models <- leaps::regsubsets(price ~ . , data = train, nbest = 1)
+bic <- sort(summary(all.models)$bic)
+bic
+```
+
+The best model based on BIC would be the first one listed here, with coefficients
+
+```{r}
+coef(all.models, which.min(bic))
+```
+
+However, the first 5 models all have similarly very small BIC's, so it is worth seeing which predictors are included in those as well:
+
+```{r}
+head(coef(all.models, bic), 5)
+```
+
+From the BIC, sqft_living, grade, view, and yr_renovated may all be valuable to the model and worth.
+
+
+
+### Visualizations to skip
+
+The number of bathrooms, and other sqft measurements are highly correlated with sqft_living, so we decided that a visualization for sqft_living would be sufficient to represent all of them. We will keep this in mind when selecting our models because there is likely to be multicollinearity between these predictors, and we will likely only keep one. A similar reasoning combined with low correlation with price caused us to leave the number of bedrooms out of our visualizations as well.
+
+We decided to drop condition out of our model and not consider it because we can only consider one categorical variable at this point in our schooling, and grade was much more highly correlated with price. We therefore considered grade to be more significant to the model and it will be the categorical variable that we consider.
+
+Also dropped from our considerations was the renovation year because very few of the data points actually have a renovation year. We decided that the data relating to yr_renovated would be incomplete and possibly misrepresented by the dearth of observations, and that our model would be more useful without it.
+
+
+
+
+John Addition 
+```{r}
+# T-test for individual predictors
+summary(lm(price ~ sqft_living + grade, data = train))
+
+# ANOVA for model comparison
+anova(lm(price ~ sqft_living + grade, data = train), lm(price ~ sqft_living, data = train))
+
+```
+Linear Model Summary: Coefficients show both are significant predictors of price. R2 53.52% of variability in price is explained. F statistic shows a low p-value suggesting full model is a better fit than null model
+
+Anova Comparison: low p-val suggest that the full model is significantly better than reduced model alone
+
+```{r}
+# General F-test
+full.model <- lm(price ~ sqft_living + grade, data = train)
+reduced.model <- lm(price ~ sqft_living, data = train)
+anova(reduced.model, full.model)
+```
+p-value associated with the F-statistic indicates the improvement in the model due to adding grade is highly significant
+
+```{r}
+# AIC and BIC
+AIC(full.model, reduced.model)
+BIC(full.model, reduced.model)
+
+```
+the full model has a lower AIC and BIC compared to the reduced model, suggesting that it is the preferred model
+
+```{r}
+# Predict test data
+predictions_full <- predict(full.model, newdata=test)
+predictions_reduced <- predict(reduced.model, newdata=test)
+
+# residuals
+residuals_full <- test$price - predictions_full
+residuals_reduced <- test$price - predictions_reduced
+
+# PRESS
+press_full <- sum(residuals_full^2)
+press_reduced <- sum(residuals_reduced^2)
+press_full
+press_reduced
+
+```
+Full model has lower press statistis again confirming that it is better than the full model
+```{r}
+# Residual Analysis
+par(mfrow=c(2,2))
+plot(full.model)
+
+# Influential Observations
+influential <- cooks.distance(full.model)
+plot(influential, type="h")
+
+```
+
+
+```{r}
+# third model with yr_renovated
+third.model <- lm(price ~ sqft_living + grade + yr_renovated, data = train)
+
+# T-test 
+summary(third.model)
+
+# ANOVA for model comparison
+anova(third.model, full.model)
+anova(third.model, reduced.model)
+
+# General F-test
+anova(reduced.model, third.model)
+anova(full.model, third.model)
+
+# AIC and BIC for the third model
+AIC(third.model)
+BIC(third.model)
+
+# PRESS for the third model
+predictions_third <- predict(third.model, newdata=test)
+residuals_third <- test$price - predictions_third
+press_third <- sum(residuals_third^2)
+
+```
+The third model, which includes sqft_living, grade, and yr_renovated, is statistically the best model among the ones compared, as indicated by the ANOVA results. It has the lowest AIC value, suggesting that it provides the best balance of model fit and complexity.Given that the third model has the highest R-squared value and the lowest AIC, and each predictor is statistically significant, this model is likely the best for predicting house prices based on the provided information. The significance of yr_renovated in addition to sqft_living and grade suggests that renovation year does have an impact on house prices and should be included in the model.
