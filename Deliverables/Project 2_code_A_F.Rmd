@@ -62,14 +62,19 @@ ggplot(train, aes(x = bedrooms, y = sqft_living, color = as.factor(waterfront)))
        y = "Square Footage",
        color = "Waterfront")
 ```
+
 # Indicators of Mulitcollinearity:
-From the correlation matrix values will range from -1, 0, and 1. Where closeness to -1 indicates a strong negative correlation and closeness to 1 indicates a strong positive correlation. As such, closeness to 0 indicates that there is no correlation. From the predictors mentioned in Question 1 the following appear to have positive correlations:
+From the correlation matrix values will range from -1, 0, and 1. Where closeness to -1 indicates a strong negative correlation and closeness to 1 indicates a strong positive correlation. As such, closeness to 0 indicates that there is no correlation. 
+
+From the predictors mentioned in Question 1 the following appear to have positive correlations:
+
 -sqft_living and grad (0.756)
 -sqft_living and sqft_above (0.874)
 -sqft_living and sqft_living15 (0.754)
 -bathrooms and sqft_living (0.755)
 
 The following appear to have negative correlations:
+
 -condition and yr_built (-0.366)
 -sqft_above and sqft_basement (-0.036)
 -condition and sqft_above(-0.159)
@@ -104,20 +109,25 @@ vif(result_reduced)
 ```
 
 #Condition:
- From the boxplot we can see that waterfront properties appear to have more houses that are a 4 or 5 condition. 
- 
- The bar plot shows that a higher proportion of waterfront properties are rated at condition 4 or 5. This may be that waterfront properties have a premium maintenance/environmental maintenance to withstand being near aquatic conditions or how water front properties are marketed to the consumer as being of higher condition status. 
+
+  The boxplot reveals a discernible trend wherein waterfront properties exhibit a higher prevalence of homes with condition ratings of 4 or 5. Rationale for this phenomenon may lie in the elevated maintenance standards necessitated by the unique environmental challenges associated with waterfront living.
+
+  It is plausible that the proximity of these properties to bodies of water exposes them to heightened levels of humidity, salt, and other elemental factors. In response to these environmental stressors, property owners and builders may find it imperative to implement more stringent maintenance protocols. Such measures would be designed to mitigate the potential damage to the property's siding or foundation, ultimately preserving the overall structural integrity of the house.
+
+  In essence, the observed concentration of houses with condition ratings of 4 or 5 among waterfront properties could be attributed to the conscientious efforts taken to fortify these structures against the deleterious effects of their aquatic/waterfront surroundings. 
 ```{r}
-##condtion bar graph
 library(ggplot2)
 
-#factor
-train$condition <- factor(train$condition)
+# Convert to factor, arrange condition
+train$condition <- factor(train$condition, levels = c(5,4,3,2,1))
 train$waterfront <- factor(train$waterfront)
 
+
+#colors and arrange from the vector levels
 ggplot(train, aes(x = waterfront, fill = condition, group = condition)) +
   geom_bar(position = "fill") +
-  labs(title = "Proportion of Condition by Waterfront Status") +
-  scale_fill_manual(values = c("red", "blue", "forestgreen", "purple", "yellow")) 
+  labs(title = "Proportion of Condition by Waterfront Status")
 
 ```
+
+
