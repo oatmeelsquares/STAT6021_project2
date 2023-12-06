@@ -85,7 +85,6 @@ Anova Comparison: low p-val suggest that the full model is significantly better 
 full.model <- lm(price ~ sqft_living + grade, data = train)
 reduced.model <- lm(price ~ sqft_living, data = train)
 anova(reduced.model, full.model)
-
 ```
 p-value associated with the F-statistic indicates the improvement in the model due to adding grade is highly significant
 
@@ -113,7 +112,6 @@ press_full
 press_reduced
 
 ```
-
 Full model has lower press statistis again confirming that it is better than the full model
 ```{r}
 # Residual Analysis
@@ -126,3 +124,30 @@ plot(influential, type="h")
 
 ```
 
+
+```{r}
+# third model with yr_renovated
+third.model <- lm(price ~ sqft_living + grade + yr_renovated, data = train)
+
+# T-test 
+summary(third.model)
+
+# ANOVA for model comparison
+anova(third.model, full.model)
+anova(third.model, reduced.model)
+
+# General F-test
+anova(reduced.model, third.model)
+anova(full.model, third.model)
+
+# AIC and BIC for the third model
+AIC(third.model)
+BIC(third.model)
+
+# PRESS for the third model
+predictions_third <- predict(third.model, newdata=test)
+residuals_third <- test$price - predictions_third
+press_third <- sum(residuals_third^2)
+
+```
+The third model, which includes sqft_living, grade, and yr_renovated, is statistically the best model among the ones compared, as indicated by the ANOVA results. It has the lowest AIC value, suggesting that it provides the best balance of model fit and complexity.Given that the third model has the highest R-squared value and the lowest AIC, and each predictor is statistically significant, this model is likely the best for predicting house prices based on the provided information. The significance of yr_renovated in addition to sqft_living and grade suggests that renovation year does have an impact on house prices and should be included in the model.
