@@ -1,0 +1,201 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+
+
+```{r}
+library(tidyverse)
+library(faraway)
+library(ROCR)
+library(leaps)
+```
+
+
+
+```{r}
+#Initalize the Dataset and split the data
+
+Data <- read.csv("kc_house_data.csv", sep=",", header=TRUE)
+Data$waterfront <- factor(Data$waterfront)
+Data$view <- factor(Data$view)
+set.seed(6021)
+sample.data <- sample.int(nrow(Data), floor(.50*nrow(Data)),replace = F)
+train <- Data[sample.data,]
+test <- Data[sample.data,]
+```
+
+From the correlation matrix bedrooms vs the other variables has a moderate positive correlation with bathrooms, sqft_living, and grade. Bedrooms has a weak positive correlation with sqft_living15 and condition has a very weak correlation. 
+
+Furthermore, bathrooms has a strong positive correlation with sqft_living, grade, and sqft_living, with a moderate positive correlation with bedrooms, conditions has a weak negative correlation. 
+
+Additionally, sqft_living has a strong positive correlation with bathrooms, grade, and sqft_living15 and moderate positive correlation with bedrooms. 
+
+Condition overall has weak correlations with the other predictors. While grade haas a strong positive correlation with bathrooms, sqft_living, and sqft_living15 and moderate positive with bedrooms. 
+
+Sqft_living15 has a strong positive correlation with bathrooms, sqft_living and grade, modrate positive correlation with bedrooms and weak negative correlation with condtion predictor. 
+```{r}
+round(cor(train[,c(4,5,6,11,12,20)]),3)
+```
+
+Fitting the logistic regression model to predict the likelihood a property being waterfront using specific housing predictors. 
+```{r}
+#Fit the logistic regression model
+
+result <- glm(waterfront ~ sqft_living + bedrooms + bathrooms + sqft_living15+condition+grade,data=train, family=binomial)
+```
+Adjustment for the warning fitted probabilities numerically close to 0 or 1, large portion of predictors are close to 0. We will keep this in mind with further analysis. 
+```{r}
+#Code to evaluate the warning of glm.fit fitted probabilities numerically 0 or 1 occurred. This occurs as a large portion of our predictors are extremely close to 0. May want to evaluate our file set for false negatives/positives.
+
+train_pred = train
+train_pred$pred = predict(result, train, type="response")
+```
+
+```{r}
+summary(result)
+```
+In looking at the difference in deviance between the model with no predictors and the fitted model (our model with predictors) the value is 143.6421 is relatively a large value indicating improvement of the model fit, towards the model with the predictors. 
+
+Looking at the p value, which is essentially 0 this indicates that the model is significant with predictors, suggesting that the predictors overall significantly improve the model fit. 
+```{r}
+#Model is significant as p-value is basically 0.
+
+deltaG2 <- result$null.deviance - result$deviance
+deltaG2
+1-pchisq(deltaG2, 6)
+```
+
+
+
+
+```{r}
+plot(result)
+```
+
+Looking at the VIFs, the predictors have a high level of multicollinearity suggested by the high values of the VIFs. A VIF over 10 indicates the predictors are highly correlated with other predictors, suggesting significant multicollinearity issues. So we will need to drop predictors to assess if that positively and significantly impacts the adjusted model.  
+```{r}
+#Get the VIF scores of the model we note high multicollinearity across all variables.
+faraway::vif(result)
+```
+The values from the Wald Test and VIF scores were used to assess what predictors to drop and in this case, two reduced models were assessed. The first reduced model keeps bedrooms, sqft_living15, condition. 
+
+The second reduced model keeps sqft_living and drops sqft_living 15 based off the high VIF and wald test value. 
+```{r}
+#Testing against two reduced models the first reduced models keeps bedrooms, sqauarefoot living of nearest 15 houses, and condition whereas the second changes nearest 15 for squarefoot of the property. Rationale used was VIF score, wald test of significance in the reduced model, and examining 
+
+reduced <- glm(waterfront ~  bedrooms + sqft_living15+condition,data=train, family=binomial)
+
+reduced_2 <- glm(waterfront ~ sqft_living + bedrooms  +condition,data=train, family=binomial)
+```
+
+H0: TS=0, there is no significant difference in model fit between the full model, model 1 and the reduced model. 
+
+Ha: TS>0, significant difference in model fit, suggesting that at least one of the predictors in the full model is statistically significant in the overall fit of the model. 
+
+The p value is smaller than the critical value when conducting both hypothesis test comparing full model to the reduced model 1 and reduced model 2 to the full model; so in this case the null hypothesis is rejected. Meaning that there is significant difference in model fit between the full model and both reduced models. In context, based off the statistical results the full model would be preferable to use, so keep all predictors used. 
+
+```{r}
+#Comparison of Significance for Model 1, reject the null hypothesis we do not drop the predictors
+TS <- reduced$deviance-result$deviance
+
+1-pchisq(TS,3)
+
+qchisq(1-0.05,3)
+```
+
+```{r}
+#Comparison of Significance for Model 1, reject the null hypothesis we do not drop the predictors
+TS_2 <- reduced_2$deviance-result$deviance
+
+1-pchisq(TS,3)
+
+qchisq(1-0.05,3)
+```
+
+The confusion matrices provide insights into the model's performance at different probability thresholds. At the  threshold of 0.5, the model predicts no properties as waterfront (FALSE), resulting in a False Positive (FP) of 1 and all 84 actual waterfront properties being misclassified as False Negatives (FN).  
+
+By lowering the probability threshold to 0.05, the model becomes more sensitive, noting 23 actual waterfront properties as True Positives (TP) but increasing the number of False Positives (FP) to 167. This is a trade-off between capturing more waterfront properties correctly at the expense of introducing more false positives.
+
+Overall this could be a result of the skewed nature of the data set.
+
+```{r}
+#Build out a confusion matrix to identify potential issues with false positives/negatives and skewed nature of the dataset. Looking at the matrix everything is being categorized as false, and all 84 of our actual waterfront properties were flaged as not (false negatives).
+preds <- predict(result, newdata=test, type="response")
+
+table(test$waterfront, preds>0.5)
+table(test$waterfront, preds>0.05)
+
+```
+From the ROC curve for the Model the performance of the model is better than random guessing. As the curve is above the diagonal indicating the model is outperforming random chance,random guessing. 
+```{r}
+rates <- ROCR::prediction(preds, test$waterfront)
+
+roc_result <- ROCR::performance(rates, measure="tpr", x.measure="fpr")
+
+plot(roc_result, main="ROC Curve for Model")
+lines(x=c(0,1), y= c(0,1), col="red")
+```
+The calculated AUC value for the  model is 0.8146268, indicating a strong level of discrimination between positive and negative instances. This AUC value, situated close to 1.0, suggests that the model performs considerably better than random chance/random guessing. In conjunction with the (ROC) curve, the higher the AUC, the more effectively the model distinguishes between true positive and true negative predictions across various probability thresholds. A value of 0.8146268 is indicative of a well-performing model with a strong ability to make meaningful distinctions meaning reliable predictions of the model. 
+```{r}
+auc<- ROCR::performance(rates, measure= "auc")
+auc@y.values
+```
+Performing stepwise process to assess the change in the AIC will note which predictors are influential in predicting waterfront status of properties. This process begins with the null model, which only has the response variable and adds predictors to deem which model is the most optimal. 
+
+The initial AIC is  985.33, which is high. The lower the AIC the more optimal the model. So, from the stepwise process the goal is to see a trend in AIC reduction. The final model is the model with sqft_living15, bedrooms, sqft_living, condition, bathrooms, and grade as predictors so the full model with an AIC: 853.7. 
+```{r}
+regnull <- glm(waterfront ~ 1, data=train, family=binomial)
+##model with all predictors
+regfull <- glm(waterfront ~ sqft_living + bedrooms + bathrooms + sqft_living15+condition+grade,data=train, family=binomial)
+
+
+step(regnull, scope=list(lower=regnull, upper=regfull), direction="both")
+```
+
+```{r}
+step(regfull, scope=list(lower=regnull, upper=regfull), direction="backward")
+```
+
+```{r}
+step(regnull, scope=list(lower=regnull, upper=regfull), direction="forward")
+
+```
+
+Logistic regression equation= −8.628 + 0.0003997sqft_living −1.222bedrooms + 0.410bathrooms + 0.0005978sqft_living15 + 0.771condition + 0.217grade
+
+Interpretations of the Coefficients:
+
+Intercept:(-8.628) When the predictors are zero, the estimated log-odds of the property having a waterfront view is -8.628.
+
+sqft_living(0.0003997) For each additional sqft increase in living space the estimated log-odds of the property having a waterfront view increases by 0.0003997, while controlling for the other predictors. 
+
+bedrooms(−1.222) For each additional bedroom the estimated log-odds of the property having a waterfront view decreases by 1.222 while controlling for the other predictors. 
+
+bathrooms(0.410) For each additional bathroom the estimated log-odds of the property having a waterfront view increases by 0.410 while controlling for the other predictors. 
+
+sqft_living15(0.0005978) For each additional square foot living area increase of the nearest 15 neighbors the estimated log-odds of the property having a waterfront view increase by 0.0005978 while controlling for other predictors. 
+
+condition(0.771) For one unit increase in condition (1-5 scale) the estimated log-odds of the property having a waterfront view increases by 0.771 while controlling for the other predictors. 
+
+grade(0.217) For one unit increase in grade, the estimated log-odds of the property having a waterfront view increases by 0.217 while controlling for other predictors. 
+
+```{r}
+#logistic regression equation
+
+result <- glm(waterfront ~ sqft_living + bedrooms + bathrooms + sqft_living15+condition+grade,data=train, family=binomial)
+result
+```
+
+
+
+
+
+
+
+
