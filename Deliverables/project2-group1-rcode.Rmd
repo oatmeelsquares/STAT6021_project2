@@ -468,9 +468,6 @@ That means that, for a 1% increase in living square footage, the price will be e
 ### Univariate visualizaions
 
 ```{r, fig.show="hold", out.width="50%"}
-train_unfactored <- train
-train$waterfront <- factor(train$waterfront)
-train$condition <- factor(train$condition, levels = c(5,4,3,2,1))
 
 # Waterfront properties
 ggplot(train[which(train$waterfront == 1),], aes(x = sqft_living)) +
@@ -512,7 +509,11 @@ When examining the properties we note that waterfront properties tend to be fair
 
 
 ```{r}
-ggplot(train, aes(x = as.factor(waterfront), fill = condition, group = condition)) +
+train.condition <- train
+train.condition$condition <- factor(train$condition, levels = c(5,4,3,2,1))
+
+
+ggplot(train.condition, aes(x = as.factor(waterfront), fill = condition, group = condition)) +
   geom_bar(position = "fill") +
   labs(title = "Proportion of Condition by Waterfront Status")
 
@@ -541,7 +542,7 @@ The scatterplot shows that most houses have 3-4 bedrooms and around 2 bathrooms.
 
 ```{r}
 train_log <- train[c(7, 2, 3, 4, 9, 10, 15)]
-round(cor(train_unfactored[c(7, 2, 3, 4, 9, 10, 15)]), 3)
+round(cor(train_log), 3)
 ```
 
 From the correlation matrix, waterfront appears to be only weakly correlated with any given predictor.
@@ -578,7 +579,6 @@ We start by fitting the logistic regression model using all predictors because i
 
 ```{r, warning = FALSE}
 
-
 model1_log <- glm(waterfront ~ bedrooms + bathrooms + sqft_living + condition + grade + sqft_living15, data=train_log, family=binomial)
 
 summary(model1_log)
@@ -608,22 +608,6 @@ pchisq(deltaG2.1, 6, lower.tail = FALSE)
 Based on this highly significant p-value, we reject the null hypothesis. Our model fits the data better than the intercept-only model, i.e., at least some of our predictors are significantly useful.
 
 
-```{r}
-# Code to evaluate the warning of glm.fit fitted probabilities numerically 0 or 1 occurred. This occurs as a large portion of our predictors are extremely close to 0. May want to evaluate our file set for false negatives/positives.
-
-train_log$pred <- predict(model1_log, train, type="response")
-```
-
-
-
-
-
-
-
-```{r}
-par(mfrow = c(2, 2))
-plot(model1_log)
-```
 
 ```{r}
 faraway::vif(model1_log)
@@ -632,6 +616,7 @@ faraway::vif(model1_log)
 The predictors have a high level of multicollinearity suggested by the high VIFs. A VIF over 10 indicates the predictors are highly correlated with other predictors, so it is likely that our model includes redundant predictors. We will use the values from the Wald Test and VIF scores to assess what predictors to drop.
 
 Two reduced models were assessed.
+
 
 # Model 2: bedrooms + sqft_living15 + condition
 
@@ -668,7 +653,7 @@ Based on the significant p-value, we reject the null hypothesis. The likelihood 
 
 The second reduced model keeps sqft_living instead of sqft_living15.
 
-```{r}
+```{r, warning = FALSE}
 model3_log <- glm(waterfront ~ bedrooms + sqft_living + condition, data = train_log, family=binomial)
 summary(model3_log)
 ```
@@ -730,56 +715,33 @@ auc<- ROCR::performance(rates, measure= "auc")
 auc@y.values
 ```
 
-The calculated AUC value for the  model is 0.7853352, indicating a strong level of discrimination between positive and negative instances. This AUC value, situated close to 1.0, suggests that the model performs considerably better than random chance/random guessing. In conjunction with the (ROC) curve, the higher the AUC, the more effectively the model distinguishes between true positive and true negative predictions across various probability thresholds.
+The calculated AUC value for the  model is 0.7853352. In conjunction with the ROC, the high AUC value indicating that the model performs significantly better than random random guessing. We will keep all of the predictors in our final model.
 
 
-
-
-
-Logistic regression equation= −8.628 + 0.0003997sqft_living −1.222bedrooms + 0.410bathrooms + 0.0005978sqft_living15 + 0.771condition + 0.217grade
-
-Interpretations of the Coefficients:
-
-Intercept:(-8.628) When the predictors are zero, the estimated log-odds of the property having a waterfront view is -8.628.
-
-sqft_living(0.0003997) For each additional sqft increase in living space the estimated log-odds of the property having a waterfront view increases by 0.0003997, while controlling for the other predictors. 
-
-bedrooms(−1.222) For each additional bedroom the estimated log-odds of the property having a waterfront view decreases by 1.222 while controlling for the other predictors. 
-
-bathrooms(0.410) For each additional bathroom the estimated log-odds of the property having a waterfront view increases by 0.410 while controlling for the other predictors. 
-
-sqft_living15(0.0005978) For each additional square foot living area increase of the nearest 15 neighbors the estimated log-odds of the property having a waterfront view increase by 0.0005978 while controlling for other predictors. 
-
-condition(0.771) For one unit increase in condition (1-5 scale) the estimated log-odds of the property having a waterfront view increases by 0.771 while controlling for the other predictors. 
-
-grade(0.217) For one unit increase in grade, the estimated log-odds of the property having a waterfront view increases by 0.217 while controlling for other predictors. 
+### Estimated Logistic Regression Equation
 
 ```{r}
-#logistic regression equation
-
-result <- glm(waterfront ~ sqft_living + bedrooms + bathrooms + sqft_living15+condition+grade,data=train, family=binomial)
-result
+summary(model1_log)$coefficients
 ```
 
 
+$logit(waterfront) = −8.628 + 0.0003997sqft_living − 1.222bedrooms + 0.410bathrooms + 0.0005978sqft_living15 + 0.771condition + 0.217grade$
 
+Interpretations of the Coefficients:
 
+When the predictors are zero, the estimated log-odds of the property having a waterfront view is -8.628.
 
+For each additional sqft increase in living space the estimated log-odds of the property having a waterfront view increases by 0.0003997, while controlling for the other predictors. 
 
+For each additional bedroom the estimated log-odds of the property having a waterfront view decreases by 1.222 while controlling for the other predictors. 
 
+For each additional bathroom the estimated log-odds of the property having a waterfront view increases by 0.410 while controlling for the other predictors. 
 
+For each additional square foot living area increase of the nearest 15 neighbors the estimated log-odds of the property having a waterfront view increase by 0.0005978 while controlling for other predictors. 
 
+For one unit increase in condition (1-5 scale) the estimated log-odds of the property having a waterfront view increases by 0.771 while controlling for the other predictors. 
 
-
-
-
-
-
-
-
-
-
-
+For one unit increase in grade, the estimated log-odds of the property having a waterfront view increases by 0.217 while controlling for other predictors. 
 
 
 
