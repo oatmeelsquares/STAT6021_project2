@@ -1,0 +1,785 @@
+---
+title: "Group 1 Project 2 Report"
+author: "Becky Desrosiers"
+date: "2023-11-19"
+output: html_document
+---
+
+
+# Section 1: High-level summary
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Section 2: Description of data and variables
+
+
+
+
+
+
+
+
+
+
+
+# Section 3: Questions of interest
+
+
+### Question 1: What factors affect the price of a home? Out of all the predictors, which is the best model? Bedrooms, bathrooms, square footage of the house or the property, condition, square footage of above-floor-level space, square footage of basement space, year built, year renovated, and the square footage of the houses and properties of the 15 closest neighbors.
+
+The practical application for the first question will be for a construction company to determine how best to invest their money into a project so that they can sell it for the best price. A buyer may also benefit from the analysis by discerning which attributes can be money-savers or in which attributes (number of bathrooms, number of floors, etc.) they may be able to gain more without spending much more. The response variable for the first question will be price; we are interested in finding which factors most influence the price. 
+
+### Question 2: Can we predict whether a house is on a waterfront based on other qualities? Square footage, # bedrooms, # bathrooms, sqft_living15, condition, grade.
+
+We are interested in the second question to find out if there is a significant difference between waterfront properties and non-waterfront properties. We hypothesize that waterfront properties will be higher quality in general (higher square footage, more bedrooms and bathrooms, higher grade), and have neighbors with bigger houses, but perhaps will be in worse condition because of the proximity to water and the risk of flooding. The response variable for the second data set is waterfront status: is it a waterfront property or not? We are interested in the relationship between waterfront status and other attributes, and if waterfront properties tend to have certain attributes.
+
+
+
+```{r}
+# Setup
+library(tidyverse)
+library(faraway)
+library(ROCR)
+library(leaps)
+library(GGally)
+library(car)
+
+# Split data
+Data <- read.csv("../Instructions/kc_house_data.csv", sep=",", header=TRUE) %>% 
+  # remove irrelevant data: id, date, zip code, latitude and longitude
+  select(-1, -2, -17, -18, -19)
+
+set.seed(6021)
+
+sample.data <- sample.int(nrow(Data), floor(.50*nrow(Data)), replace = F)
+train <- Data[sample.data, ]
+test <- Data[-sample.data, ]
+
+# PRESS function
+PRESS <- function(model) {
+
+  e <- model$residuals
+  h <- influence(model)$hat
+  
+  PRESS <- sum((e/(1-h)) ** 2)
+  return(PRESS)
+}
+
+```
+
+
+# Section 4: Question 1 data visualizations
+
+### Univariate visualizations
+
+```{r}
+ggplot(train, aes(x=grade))+
+  geom_bar(fill="skyblue")+
+  labs(x="Grade of the Property",  title="Building Grade")
+```
+
+This barchart of grade of the property reveals a fairly normal distribution with a slight skew to the right. There are relatively few properties with grade of 5 or less, with none in the low 1-3 range and most properties having an average grade of 7-8. It does not look like there is anything abnormal, and no outliers in this variable, which will make it reliable in our model.
+
+
+
+
+```{r}
+ggplot(train, aes(x=yr_built))+
+  geom_histogram(bins=104, fill= 'skyblue')+
+  labs(x="Year", y="Count", title= "Home Construction Date")
+```
+
+This histogram is created to evaluate the distribution of the construction date of the houses in the dataset. The distribution of the histogram is roughly left skewed, with more observations occurring in recent years. Though the skewness that is present is not necessarily extreme it may still be prudent to examine if the older homes present outsized influence on price when fitting the model. One thing to note is that certain years exhibit high spikes of activity in regular intervals, which appear to be after every 5-10 years. When examining the relationship between price and construction date these high volume points may be worth further scrutiny in case the increased quantity coincided with decreased quality of construction that impacts price.
+
+
+
+
+
+```{r}
+ggplot(train, aes(x=sqft_living))+
+  geom_histogram(bins=104, fill="skyblue")+
+  labs(x="Living Space (sqft)", y="Count", title= "Home Living Space")
+```
+
+The histogram displays a distribution for the squarefoot living space of the houses within the training data set. Our distribution is right skewed indicating potentially to be on the lookout for outliers on the extreme end that will impact the linearity of the relationship when we conduct our testing. Additionally, if we are to describe our data set we would expect the mean value to be higher than the median and may want to use the median value as a descriptor when discussing how to evaluate the central point of housing living space as a better representation of the data set.
+
+
+
+### Bivariate visualizations
+
+```{r}
+ggplot(train, aes(x = sqft_living, y = price)) +
+  geom_point(alpha = 0.1) + 
+  theme_minimal() +
+  labs(title = "Price Against Living Space", x = "Living Space (sqft)", y = "Price")
+
+```
+
+There is a clear positive correlation between the square footage of living space and the price of a house. As the square footage increases, so does the price, which is a common trend in real estate markets. Most of the data points are concentrated in the lower range of square footage and price, indicating that a majority of the houses in this dataset are moderately sized and priced. The plot suggests that as homes increase in square footage, the price does not just increase linearly but may increase at a higher rate. This could imply a premium for larger homes beyond a certain size.
+
+The dense clustering of points at the lower square footage range could make it challenging to distinguish between the price differences among smaller homes. This might necessitate a more detailed analysis or the use of additional variables to understand the pricing structure for these homes. For any given square footage, there is quite a wide variation in price, especially in the higher ranges of square footage. This indicates that other factors may be affecting the price, which we will explore in our analysis. There are several data points which may have high leverage, particularly houses with a large square footage that are priced much higher than the rest. These could represent luxury homes or properties with unique features that significantly increase their value. Also of note is the one point at the high extreme of square footage but mid-price, which could be influential.
+
+
+### Correlation matrix
+
+```{r}
+round(cor(train),3)
+```
+
+
+From the correlation matrix values will range from -1, 0, and 1. Where closeness to -1 indicates a strong negative correlation and closeness to 1 indicates a strong positive correlation. As such, closeness to 0 indicates that there is no correlation. 
+
+From the predictors mentioned in Question 1 the following appear to have positive correlations:
+
+-sqft_living and grade (0.756)
+-sqft_living and sqft_above (0.874)
+-sqft_living and sqft_living15 (0.754)
+-bathrooms and sqft_living (0.755)
+
+From the correlation matrix, we also observe that sqft_basement has a very low correlation with price (0.338). Therefore we will not be including it in our model or investigating it moving forward.
+
+Condition, waterfront, and view will also be dropped from the model and not considered because we can only consider one categorical variable at this point in our schooling, and grade is much more highly correlated with price. We therefore considered grade to be the most significant to the model and it will be the categorical variable that we consider.
+
+
+
+
+### Skipped visualizations
+
+The number of bathrooms, and other sqft measurements are highly correlated with sqft_living, so we decided that a visualization for sqft_living would be sufficient to represent all of them (with the exception of sqft_basement, which was dropped from our investigation). We will keep this in mind when selecting our models because there is likely to be multicollinearity between these predictors, and we will likely only keep one. A similar reasoning combined with low correlation with price caused us to leave the number of bedrooms out of our visualizations as well.
+
+
+Also dropped from our considerations was the renovation year because very few of the data points actually have a renovation year. We decided that the data relating to yr_renovated would be incomplete and possibly misrepresented by the dearth of observations, and that our model would be more useful without it.
+
+```{r}
+train_lin <- train[c(-7, -8, -9, -12, -14)]
+```
+
+
+
+
+
+
+# Section 5: Question 1 linear regression
+
+### VIFS:
+
+We will use VIFs to investigate multicollinearity in our model. Predictors with high VIFs (>5) may be linear combinations of other predictors, which means that some of them may be dropped without sacrrificing validity in our model. The VIFs from our full model appear below:
+
+```{r}
+full_model <- lm(price ~ ., data = train_lin)
+round(vif(full_model), 3)
+```
+
+From the VIFS it seems that sqft_living has a high level of multicollinearity, with a VIF of 7.305. The predictor sqft_above also has a VIF above 5, which flags it for multicollinearity. Using common sense and the correlation matrix, we can say that there is multicollineaity between sqft_living and sqft_above, as well as possibly bathrooms, sqft_lot, sqft_living15, and sqft_lot15.
+
+
+
+### AIC stepwise regression
+
+Akaike information criterion (AIC) is a model selection criterion that increases with model fit and penalizes for extra parameters. We will use stepwise regression based on AIC to investigate which model may be best.
+
+```{r}
+intercept_model <- lm(price ~ 1, data = train_lin)
+step(intercept_model, scope = list(lower = intercept_model, upper = full_model), direction = "both")
+```
+
+From the stepwise regression, the model with the best AIC includes every predictor except for sqft_lot. That seems a little overcomplicated, so we will investigate another model selection criterion, BIC.
+
+
+### BIC
+
+Bayesian information criterion (BIC) is a model selection criterion that increases with model fit and penalizes for extra parameters. We are looking for small values with this criterion: the smaller, the better.
+
+```{r, warning = FALSE}
+# Warning of linear dependencies, which will be exlpored later with VIFs
+all.models <- leaps::regsubsets(price ~ . , data = train_lin, nbest = 1)
+bic <- sort(summary(all.models)$bic)
+bic
+```
+
+The best model based on BIC would be the first one listed here, with coefficients
+
+```{r}
+coef(all.models, which.min(bic))
+```
+
+However, the first 3 models all have similarly very small BIC's, so it is worth seeing which predictors are included in those as well:
+
+```{r}
+head(coef(all.models, bic), 3)
+```
+
+From the BIC, sqft_living, grade, and yr_built may all be valuable to the model and worth exploring. From the VIFs, it seems as though sqft_living is able to summarize the other sqft predictors to the extent that they are not worth the added complication of the extra predictor variables. With this preliminary data, we will begin testing models:
+
+
+### Preliminary model: price ~ sqft
+
+
+```{r}
+model1 <- lm(price ~ sqft_living, data = train_lin)
+summary(model1)
+```
+
+From the summary, the model appears very useful because it has very significant f-tests and ANOVA tests. We must check that the regression assumptions are met.
+
+
+```{r}
+ggplot(train_lin, aes(x = sqft_living, y = price)) +
+  geom_point(alpha = 0.2) + 
+  theme_minimal() +
+  geom_smooth(method = "lm", se = FALSE)+
+  labs(title = "Price Against Living Space",
+       x = "Living Space (sqft)",
+       y = "Price")
+
+```
+
+There is a clear relationship, and the variance appears to increase with the predictor. We will explore further by ylooking at the residual plot.
+
+```{r}
+par(mfrow = c(2, 2))
+plot(model1)
+```
+
+Assumption 2 is met because the residuals average along the x-axis. However, assumption 1 is violated because the variance in residuals increases with x. We need to transform the response variable. We will use a boxcox plot to help determine what transformation to apply.
+
+```{r}
+library(MASS)
+MASS::boxcox(model1, lambda = seq(-2, 5, 1/10))
+```
+
+Since 0 is within the critical region on the boxcox plot and is preferred, we will apply a log transformation. *log.y* = log(*y*). We will visualize the relationship again with the new variable.
+
+```{r}
+train_lin$log.y <- log(train_lin$price)
+
+
+ggplot(train_lin, aes(x = sqft_living, y = log.y)) +
+  geom_point(alpha = 0.2) + 
+  geom_smooth(method = "lm", se = FALSE)
+  theme_minimal() +
+  labs(title = "Scatter Plot of Price vs Square Footage of Living Space",
+       x = "Square Footage of Living Space",
+       y = "log(Price)")
+
+
+```
+
+
+And investigate the new residual plot:
+
+
+```{r}
+model1_ystar <- lm(log.y ~ sqft_living, data = train_lin)
+
+par(mfrow = c(2, 2))
+plot(model1_ystar)
+```
+
+Assumption 1 is now met; the residuals are now evenly scattered around the mean. However, the mean residual skews negative as x grows large, and the scatterplot seems to show a curved relationship, rather than strictly linear, because the majority of the points are below the regression line when x is small and large, but above for moderate levels of x. We will try a log transformation on the predictor variable so that our model can remain interpretable.
+
+
+
+```{r}
+train_lin$log.sqft <- log(train_lin$sqft_living)
+
+
+ggplot(train_lin, aes(x = log.sqft, y = log.y)) +
+  geom_point(alpha = 0.2) + 
+  geom_smooth(method = "lm", se = FALSE)
+  theme_minimal() +
+  labs(title = "Scatter Plot of Price vs Square Footage of Living Space",
+       x = "log(Square Footage of Living Space)",
+       y = "log(Price)")
+
+
+```
+
+
+
+```{r}
+model1_yxstar <- lm(log.y ~ log.sqft, data = train_lin)
+
+par(mfrow = c(2, 2))
+plot(model1_yxstar)
+```
+
+Now assumption 1 is violated; the residual plot looked a lot better before we transformed the predictor variable. Even though at very high levels of x, y increased much more than the model would predict, the assumptions were better met overall with the untransformed predictor variable. Perhaps another predictor can account for this variation at very high values of x. We will consider adding grade, since we found from our model selection criteria that grade may be a valuable predictor in the model.
+
+
+### Model 2: + grade
+
+
+```{r}
+
+model2 <- lm(price ~ sqft_living + grade, data = train_lin)
+# T-test for individual predictors
+summary(model2)
+
+# ANOVA for model comparison
+anova(model2, model1)
+
+```
+The summary indicates that both sqft_living and grade are significant predictors of price. Based on the R^2^ value, 53.52% of variability in price is explained by this model. Low p-values for both the F-statistic and the ANOVA test indicate the model with both predictors is better than the intercept-only model and our preliminary model with only sqft_living. We now look at the residual plot to evaluate if the regression assumptions are met.
+
+```{r}
+par(mfrow=c(2,2))
+plot(model2)
+```
+
+The variance of the residuals clearly increases with the predictor variable, violating assumption 2. We will try a log transformation.
+
+```{r}
+model2_ystar <- lm(log.y ~ sqft_living + grade, data = train_lin)
+
+par(mfrow=c(2,2))
+plot(model2_ystar)
+```
+
+This plot looks much better. Even though our outlier is still skewing the average residual slightly at high levels of the predictor, the residuals are mostly evenly scattered along the x-axis.
+
+We will now compare the two models, both with transformed response variables.
+
+
+```{r}
+
+criteria <- AIC(model2_ystar, model1_ystar)["AIC"]
+criteria$BIC <- BIC(model2_ystar, model1_ystar)[["BIC"]]
+criteria$PRESS <- c(PRESS(model1_ystar), PRESS(model2_ystar))
+criteria
+```
+The full model has a lower AIC and BIC compared to the reduced model but a larger PRESS statistic. The results are conflicting, so we will investigate further by seeing which model does better on the test data by calculating Mean Squared Error (MSE).
+
+```{r}
+# Predict test data
+predictions_model2 <- predict(model2_ystar, newdata=test)
+predictions_model1 <- predict(model1_ystar, newdata=test)
+
+# calculate MSE
+mse_model2 <- sum((test$price - predictions_model2) ** 2) / 10807
+mse_model1 <- sum((test$price - predictions_model1) ** 2) / 10807
+
+paste("MSE model 2:", mse_model2)
+paste("MSE model 1:", mse_model1)
+
+```
+
+```{r}
+# Influential Observations
+influential <- cooks.distance(model2)
+plot(influential, type="h")
+
+```
+
+
+
+### Model 3: + yr_built
+
+Before we can compare models, we must check the regression assumptions.
+
+```{r}
+model3 <- lm(price ~ sqft_living + grade + yr_built, data = train_lin)
+
+par(mfrow=c(2,2))
+plot(model3)
+```
+
+As with the other models, assumption 2 is not met. We will do a log transformation of the response and reevaluate.
+
+```{r}
+model3_ystar <- lm(log.y ~ sqft_living + grade + yr_built, data = train_lin)
+
+par(mfrow=c(2,2))
+plot(model3_ystar)
+```
+
+From the residual plot, assumption 1 seems to be met. It looks, however, like the model starts to consistenly underpredict housing prices as x grows large, violating assumption 2. We will investigate partial regression plots to see if we need to transform a predictor, and which one.
+
+```{r}
+car::avPlots(model3_ystar)
+```
+
+The sqft_living plot looks the least linear, so we will attempt a log transformation.
+
+```{r}
+model3_yxstar <- lm(log.y ~ log.sqft + grade + yr_built, data = train_lin)
+
+par(mfrow=c(2,2))
+plot(model3_yxstar)
+```
+
+Both regression assumptions appear to be mostly met from looking at the residual plot, so we will now investigate the model compared to the others.
+
+```{r}
+summary(model3_yxstar)
+
+anova(model3_yxstar, model1_ystar)
+anova(model3_yxstar, model2_ystar)
+```
+
+All of the p-values are very significant, favoring keeping the 3 predictors in the model over the previous models or the intercept-only model.
+
+
+
+```{r}
+
+# AIC and BIC for the third model
+paste("AIC model 3:", AIC(model3_yxstar))
+paste("BIC model3:", BIC(model3_yxstar))
+
+# MSE for the third model
+test$log.sqft <- log(test$sqft_living)
+predictions_model3 <- predict(model3_yxstar, newdata=test)
+mse_model3 <- sum((test$price - predictions_model3) ** 2) / 10807
+
+paste("MSE model3:", mse_model3)
+```
+The third model, which includes sqft_living, grade, and yr_renovated, has significantly lower AIC and BIC values than the other two, suggesting that it provides the best balance of model fit and complexity. It has significantly the highest adjusted R^2^ value, indicating that the model explains approximately 61% of the variation in the response.  All three predictors (log(sqft_living), grade and yr_built) have a significant impact on price and the usefulness of the model, so we will keep all three in the model. Our estimated regression equation will be:
+
+$log(price) = 18.3300736 + 0.4280280log(sqft_living) + 0.2591008grade - 0.0053270yr_built$
+
+That means that, for a 1% increase in living square footage, the price will be expected to increase by about 0.43%, when all other predictors are held constant. For a 1-unit increase in grade, the price will increase by approximately 30% when all other predictors are held constant. Finally, for a house built 1 year more recently, the price will be expected to increase by about 0.5% when all other predictors are held constant.
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Section 6: Question 2 data visualizations
+
+
+### Univariate visualizaions
+
+```{r, fig.show="hold", out.width="50%"}
+train_unfactored <- train
+train$waterfront <- factor(train$waterfront)
+train$condition <- factor(train$condition, levels = c(5,4,3,2,1))
+
+# Waterfront properties
+ggplot(train[which(train$waterfront == 1),], aes(x = sqft_living)) +
+  geom_histogram(position = "stack", bins = 30, fill = "skyblue", color = "black") +
+  labs(fill = "Waterfront", x = "Square Footage", y = "Frequency") +
+  theme_minimal() +
+  labs(title = "Waterfront")
+
+# Non-waterfront properties
+ggplot(train[which(train$waterfront == 0),], aes(x = sqft_living)) +
+  geom_histogram(position = "stack", bins = 30, fill = "skyblue", color = "black") +
+  labs(fill = "Waterfront", x = "Square Footage", y = "Frequency") +
+  theme_minimal() +
+  labs(title = "Non-waterfront")
+```
+
+
+From the graphs, we can observe that the distribution of living area sizes for both waterfront and non-waterfront homes appears right-skewed, indicating that there are a larger number of homes with smaller living areas and fewer homes with larger living areas.
+
+Waterfront homes are less frequent, which is expected since waterfront properties are typically rarer and potentially more desirable. It will be important to note the rarity of the waterfront status when choosing our threshold for logistic regression. The range of square footage for non-waterfront homes extends from the smallest to the largest sizes, showing a wide variety of home sizes. Waterfront homes tend to have larger living areas on average, with fewer small-sized homes compared to non-waterfront homes. There is a peak in frequency for non-waterfront homes at the smaller end of the  scales. For waterfront homes, the data are more evenly distributed, although with a much lower frequency overall due to fewer waterfront homes in the dataset.
+
+
+
+### Bivariate visualizations
+
+
+
+```{r}
+ggplot(train, aes(y = as.factor(waterfront), x = grade))+
+  geom_boxplot(fill="skyblue")+
+  labs(x="Grade of the Property", y="Waterfront Status", title="Boxplot of Grade for Waterfront and Non-Waterfront Properties")
+```
+
+
+The x-axis for this visualization represents grade which for context indicates that 1-3 can be considered "poor construction" 7 has an average quality and 11-13 have a high quality. On the y-axis, the "1" group indicates that the property is waterfront while "0" indicates that it is not a waterfront property.
+
+When examining the properties we note that waterfront properties tend to be fairly soundly made with a median score of approximately 9 and nothing within the poor construction range (<5). The boxplot is slightly skewed left, indicating a large number of high-quality homes. This is contrasted by non-waterfront properties which have 7 outliers and houses that are built to lower grades. The non-waterfront properties are skewed right, indicating a higher volume of lower-quality homes, with a median around 7. When we conduct the analysis we may wish to keep an eye out for the many outliers in the non-waterfront property category that may potentially skew the analysis.
+
+
+
+```{r}
+ggplot(train, aes(x = as.factor(waterfront), fill = condition, group = condition)) +
+  geom_bar(position = "fill") +
+  labs(title = "Proportion of Condition by Waterfront Status")
+
+```
+
+The bar graph demonstrates the trend wherein waterfront properties exhibit a higher prevalence of homes with higher condition ratings. About 50% of waterfront homes are rated condition 4 or 5, compared to only about 35% on non-waterfront properties.
+
+Perhaps the proximity of these properties to bodies of water exposes them to heightened levels of humidity, salt, and other elemental factors. In response to these environmental stressors, property owners and builders may find it imperative to implement more stringent maintenance protocols. Such measures would be designed to mitigate the potential damage to the property's siding or foundation, ultimately preserving the overall structural integrity of the house. 
+
+
+### Multivariate visualizations
+  
+  
+```{r}
+ggplot(train, aes(x=bedrooms, y=bathrooms, color = as.factor(waterfront)))+
+  geom_count()+
+  labs(x="Number of Bedrooms",
+       y="Number of Bathrooms",
+       title="Bedrooms and Bathrooms in Waterfront Homes vs. Non-Waterfront")
+```
+The scatterplot shows that most houses have 3-4 bedrooms and around 2 bathrooms. The blue points, representing waterfront properties, are evenly scattered throughout the rest of them, indicating that waterfront status may not be related to the number of bedrooms and bathrooms in a home. We notice a potentially influential observation in the lower-right quadrant of the graph, which represents a non-waterfront property with over 30 bedrooms but less than 2 bathrooms.
+  
+
+### Correlation matrix
+
+
+```{r}
+train_log <- train[c(7, 2, 3, 4, 9, 10, 15)]
+round(cor(train_unfactored[c(7, 2, 3, 4, 9, 10, 15)]), 3)
+```
+
+From the correlation matrix, waterfront appears to be only weakly correlated with any given predictor.
+
+Predictor bedrooms has a moderate positive correlation with bathrooms and sqft_living. Predictor bedrooms has a weak positive correlation with sqft_living15 and grade, while the correlation with condition is very weak. Predictor bathrooms has a strong positive correlation with sqft_living and grade, and a weak negative correlation with condition. Additionally, sqft_living has a strong positive correlation grade and sqft_living15, and grade is strongly correlated with sqft_living15 as well.
+
+Condition overall has weak correlations with the other predictors.
+
+
+# Section 7: Question 2 logistic regression
+
+
+### Model selection
+
+We use stepwise regression to help determine which model to use.
+
+```{r, warning = FALSE}
+
+
+null_model_log <- glm(waterfront ~ 1, data=train_log, family=binomial)
+full_model_log <- glm(waterfront ~ ., data=train_log, family=binomial)
+
+step(null_model_log, scope=list(lower = null_model_log, upper = full_model_log), direction="both")
+```
+We note the warning that fitted probabilities numerically 0 or 1 occurred, but hide them from the output because there are warnings for every model. As noted when examining the visualizations, waterfront properties can be considered a rare event.
+
+
+Stepwise regression based on AIC suggests that the full model with all of the predictors best fits the data.
+
+
+### Model 1: full model
+
+We start by fitting the logistic regression model using all predictors because it was found to be the optimal model based on AIC stepwise regression.
+
+```{r, warning = FALSE}
+
+
+model1_log <- glm(waterfront ~ bedrooms + bathrooms + sqft_living + condition + grade + sqft_living15, data=train_log, family=binomial)
+
+summary(model1_log)
+```
+
+
+We perform a likelihood ratio test to assess the usefulness of our model compared to the intercept-only model.
+
+$H_{0}: \beta_{1} = \beta_{2} = ... = \beta_{6} = 0$
+
+$H_{a}:$ at least one of these is significant.
+
+We find the test statistic by subtracting the Residual deviance from the null deviance:
+
+
+```{r}
+deltaG2.1 <- model1_log$null.deviance - model1_log$deviance
+deltaG2.1
+```
+
+And compare it to a $\chi^{2}$ distribution with 6 degrees of freedom to find the p-value:
+
+```{r}
+pchisq(deltaG2.1, 6, lower.tail = FALSE)
+```
+
+Based on this highly significant p-value, we reject the null hypothesis. Our model fits the data better than the intercept-only model, i.e., at least some of our predictors are significantly useful.
+
+
+```{r}
+# Code to evaluate the warning of glm.fit fitted probabilities numerically 0 or 1 occurred. This occurs as a large portion of our predictors are extremely close to 0. May want to evaluate our file set for false negatives/positives.
+
+train_log$pred <- predict(model1_log, train, type="response")
+```
+
+
+
+
+
+
+
+```{r}
+par(mfrow = c(2, 2))
+plot(model1_log)
+```
+
+```{r}
+faraway::vif(model1_log)
+```
+
+The predictors have a high level of multicollinearity suggested by the high VIFs. A VIF over 10 indicates the predictors are highly correlated with other predictors, so it is likely that our model includes redundant predictors. We will use the values from the Wald Test and VIF scores to assess what predictors to drop.
+
+Two reduced models were assessed.
+
+# Model 2: bedrooms + sqft_living15 + condition
+
+The first reduced model keeps bedrooms, sqft_living15, and condition based on the insignificant Wald tests and high VIFs. Predictor bedrooms was also highly correlated with bathrooms and sqft_living, while grade was highly correlated with both sqft_living and sqft_living15. Condition was kept because of its low correlation with the other predictors.
+
+```{r}
+model2_log <- glm(waterfront ~  bedrooms + sqft_living15 + condition, data=train, family=binomial)
+summary(model2_log)
+```
+
+We conduct a hypothesis test to compare model 2 to model 1
+
+$H_{0}: \beta_{2} = \beta_{3} = \beta_{5} = 0$
+
+$H_{a}:$ at least one of these is significant.
+
+Test statistic:
+
+```{r}
+deltaG2.2 <- model2_log$deviance - model1_log$deviance
+deltaG2.2
+```
+
+p-value:
+
+```{r}
+pchisq(deltaG2.2, 3, lower.tail = FALSE)
+```
+
+Based on the significant p-value, we reject the null hypothesis. The likelihood ratio test favors the full model.
+
+
+### Model 3: bedrooms + sqft_living + condition
+
+The second reduced model keeps sqft_living instead of sqft_living15.
+
+```{r}
+model3_log <- glm(waterfront ~ bedrooms + sqft_living + condition, data = train_log, family=binomial)
+summary(model3_log)
+```
+
+We perform a hypothesis test to compare model 2 to the full model as well.
+
+$H_{0}: \beta_{2} = \beta_{5} = \beta_{6} = 0$
+
+$H_{a}:$ at least one of these is significant.
+
+Test statistic:
+
+```{r}
+deltaG2.3 <- model3_log$deviance - model1_log$deviance
+deltaG2.3
+```
+
+p-value:
+
+```{r}
+pchisq(deltaG2.3, 3, lower.tail = FALSE)
+```
+
+Based on the significant p-value, we reject the null hypothesis. The likelihood ratio test favors the full model. We will keep model 1 with all predictors.
+
+
+### Confusion Matrices
+
+```{r}
+preds <- predict(model1_log, newdata=test, type="response")
+
+table(test$waterfront, preds>0.5)
+table(test$waterfront, preds>0.05)
+```
+
+The confusion matrices provide insights into the model's performance at different probability thresholds. At the  threshold of 0.5, the model predicts only one property to be a waterfront property, resulting in false negatives for all 79 properties which are actually waterfront.  
+
+By lowering the probability threshold to 0.05, the model becomes more sensitive, noting 13 actual waterfront properties as True Positives (TP) but increasing the number of False Positives (FP) to 170. This is a trade-off between capturing more waterfront properties correctly at the expense of introducing more false positives.
+
+Overall this could be a result of the skewed nature of the data set.
+
+
+### ROC and AUC
+
+```{r}
+rates <- ROCR::prediction(preds, test$waterfront)
+
+roc_result <- ROCR::performance(rates, measure="tpr", x.measure="fpr")
+
+plot(roc_result, main="ROC Curve for Model")
+lines(x=c(0,1), y= c(0,1), col="red")
+```
+
+
+Based on the ROC curve for model 1, the model performs better than random guessing because the curve is above the diagonal, which represents random guessing.
+
+```{r}
+auc<- ROCR::performance(rates, measure= "auc")
+auc@y.values
+```
+
+The calculated AUC value for the  model is 0.7853352, indicating a strong level of discrimination between positive and negative instances. This AUC value, situated close to 1.0, suggests that the model performs considerably better than random chance/random guessing. In conjunction with the (ROC) curve, the higher the AUC, the more effectively the model distinguishes between true positive and true negative predictions across various probability thresholds.
+
+
+
+
+
+Logistic regression equation= −8.628 + 0.0003997sqft_living −1.222bedrooms + 0.410bathrooms + 0.0005978sqft_living15 + 0.771condition + 0.217grade
+
+Interpretations of the Coefficients:
+
+Intercept:(-8.628) When the predictors are zero, the estimated log-odds of the property having a waterfront view is -8.628.
+
+sqft_living(0.0003997) For each additional sqft increase in living space the estimated log-odds of the property having a waterfront view increases by 0.0003997, while controlling for the other predictors. 
+
+bedrooms(−1.222) For each additional bedroom the estimated log-odds of the property having a waterfront view decreases by 1.222 while controlling for the other predictors. 
+
+bathrooms(0.410) For each additional bathroom the estimated log-odds of the property having a waterfront view increases by 0.410 while controlling for the other predictors. 
+
+sqft_living15(0.0005978) For each additional square foot living area increase of the nearest 15 neighbors the estimated log-odds of the property having a waterfront view increase by 0.0005978 while controlling for other predictors. 
+
+condition(0.771) For one unit increase in condition (1-5 scale) the estimated log-odds of the property having a waterfront view increases by 0.771 while controlling for the other predictors. 
+
+grade(0.217) For one unit increase in grade, the estimated log-odds of the property having a waterfront view increases by 0.217 while controlling for other predictors. 
+
+```{r}
+#logistic regression equation
+
+result <- glm(waterfront ~ sqft_living + bedrooms + bathrooms + sqft_living15+condition+grade,data=train, family=binomial)
+result
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
