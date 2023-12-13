@@ -1,6 +1,6 @@
 ---
 title: "Group 1 Project 2 Report"
-author: "Becky Desrosiers"
+author: "Becky Desrosiers, Alexandra Ferentinos, Abner Casillas-Colon, John Le"
 date: "2023-11-19"
 output: html_document
 ---
