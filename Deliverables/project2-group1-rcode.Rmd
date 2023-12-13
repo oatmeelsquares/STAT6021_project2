@@ -9,8 +9,9 @@ output: html_document
 # Section 1: High-level summary
 
 
+This report investigates the question: What factors affect the price of a home? Section 4 displays visualizations of the predictor variables in question. Through regression analysis, Section 5 of this report finds that square footage, grade, and build year can be used to create a linear model that explains 61% of variation in home prices. There will always be variation due to fringe factors and random chance, but our model is useful when compared to models with fewer predictors and maintains simplicity so as to remain interpretable.
 
-
+Section 6 displays visualizations related to our second question of interest: Can we predict whether a house is on a waterfront based on other qualities? We found in Section 7 that waterfront status can be predicted with a 97.8% accuracy rate using square footage, number of bedrooms and bathrooms, condition, grade, and the square footage of the nearest 15 neighbors as predictors. Based on our analysis, our model performs significantly better than random guessing, and can be used to quantify the relationship between a home's waterfront status and the other factors.
 
 
 
@@ -22,7 +23,53 @@ output: html_document
 
 # Section 2: Description of data and variables
 
+This data describesobservations of houses sold in King County, Washington between May 2014 and May 2015.  It contains 16 variables that we will utilize for our analysis that are listed below.  Two variables that are not included in our analysis of the dataset are ID and Date which represent a unique ID for the home and Date which the home was sold respectively. 
 
+ 
+
+Default Variables: 
+
+- Price: The price of the home sold. 
+
+- Bedrooms: The number of bedrooms that the house has. 
+
+- Bathrooms: The number of bathrooms that the house has. 
+
+- Sqft_living: The square footage of the interior living space for the house. 
+
+- Sqft_lot: The square footage of the land space of the house. 
+
+- Floors: The number of floors the house has. 
+
+- Waterfront: A variable indicating whether the house has a view of the waterfront or not. 
+
+- View: A variable denoting the quality of the view that the house has ranging from 0 to 4.  
+
+- Condition: A factor variable ranging from 1 to 5 indicating the state that the house is currently in. 
+
+- Grade: A factor variable for the quality of the homes initial construction with 1-3 indicates quality that is below expectations, 7 meeting average expectations, and 11-13 having a high quality of construction. 
+
+- Sqft_above: The interior square footage of the home that is above ground level. 
+
+- Sqft_basement: The interior square footage of the home that is below ground level. 
+
+- Yr_built: The year in which the house was built. 
+
+- Yr_renovated: The year the house was renovated if applicable, otherwise zero. 
+
+- Sqft_living15: The square footage of the interior living space for the nearest 15 neighbor homes. 
+
+- Sqft_lot15: The square footage of the land space for the nearest 15 neighbor homes. 
+
+ 
+
+Created Variables: 
+
+- log.y – This variable is the price variable with a log transformation created to correct issues linear assumptions for the model. 
+
+- log.sqft_living – This variable is the log transformed version of the square foot living space created to correct issues linear assumptions for the model. 
+
+ 
 
 
 
@@ -691,7 +738,7 @@ table(test$waterfront, preds>0.05)
 
 The confusion matrices provide insights into the model's performance at different probability thresholds. At the  threshold of 0.5, the model predicts only one property to be a waterfront property, resulting in false negatives for all 79 properties which are actually waterfront.  
 
-By lowering the probability threshold to 0.05, the model becomes more sensitive, noting 13 actual waterfront properties as True Positives (TP) but increasing the number of False Positives (FP) to 170. This is a trade-off between capturing more waterfront properties correctly at the expense of introducing more false positives.
+By lowering the probability threshold to 0.05, the model becomes more sensitive: the sensitivity increases from zero to 16.46%, while the accuracy of the model is reduced from 99.26% to 97.82%. This is a trade-off between capturing more waterfront properties correctly at the expense of introducing more false positives.
 
 Overall this could be a result of the skewed nature of the data set.
 
