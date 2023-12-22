@@ -1,0 +1,67 @@
+---
+title: "Project 2"
+author: "Alexandra Ferentinos"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: 
+    latex_engine: xelatex
+  output:
+    pdf_document:
+      latex_engine: xelatex
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)       # load libraries you always use here
+library(dplyr)
+library(scales)
+
+```
+
+## Project 2
+
+
+#  sale price (response) predictors: sqft, #bedrooms, condition, #floors, sqft above
+
+The box plot visualization of sale price against house condition, ranging from 1 to 5, (5 being the best) shows interesting information about the relationship between condition and sale price. Houses in condition 3 to 5 have the most outliers. This could indicate that there is a higher variance in sale prices within house conditions 3 to 5. 
+
+This visualization relates to the above question as it shows that house condition 3 to 5 has higher variability in sale price meaning there may be other predictors affecting this nuance. So more analysis of sale price(response), to the above predictors from the question could illuminate such outliers. 
+
+
+```{r}
+Data<-read.csv("kc_house_data.csv", sep=",", header=TRUE)
+set.seed(6021)
+sample.data<-sample.int(nrow(Data), floor(.50*nrow(Data)), replace = F)
+train<-Data[sample.data, ]
+test<-Data[-sample.data, ]
+
+##to assist with the visualization 
+log_price<-log10(train$price)
+#boxplot of House condition vs Sale Price
+ggplot(train, aes(x = factor(condition), y = log_price)) +
+  geom_boxplot(fill="green") +
+  labs(title = 'Boxplot of House Condition vs Sale Price',
+       x = 'House Condition',
+       y = 'Sale Price')
+```
+
+
+#Can we predict whether a house is on a waterfront based on other qualities? Square footage, # bedrooms, # bathrooms, sqft_living15, condition, grade. 
+
+The scatter plot data visualization indicates a concentration of residential properties within the range of 0 to 10 bedrooms in terms of frequency. Additionally, it demonstrates that homes with higher square footage tend to be centered within 0 to 10 bedrooms.. From the data, it seems that a the majority of homes are not waterfront homes. 
+
+It is interesting to note that the outliers in terms of the square footage of the living spaces do not seem to be distinctly influenced by the proximity of a home to a waterfront. This observation may imply that the size of the living area of a house may not necessarily correlate with its location relative to a waterfront area, this could be that other predictors are more influential in the response variable square footage. So, from the waterfront quality in consideration to square footage we cannot necessarily predict whether the house is a waterfront home. 
+```{r}
+# Create the scatterplot
+ggplot(train, aes(x = bedrooms, y = sqft_living, color = as.factor(waterfront))) +
+  geom_point() +
+  labs(title = "Scatterplot of Number of Bedrooms vs Square Footage ",
+       x = "Number of Bedrooms",
+       y = "Square Footage",
+       color = "Waterfront")
+```
+
+
+
